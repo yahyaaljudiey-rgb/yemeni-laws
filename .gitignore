@@ -17,8 +17,19 @@
 /.next/
 /out/
 
+# ملاحظة: public/data (حزمة القوانين ~54MB) تُرفَع للمستودع عمداً
+# لأنّ بناء GitHub Pages السحابي يحتاجها (قاعدة laws.db المصدرية مستثناة ومحلية فقط).
+
 # production
 /build
+
+# بيانات المكتبة المحلية (قاعدة البيانات + النماذج المُنزَّلة + ملفات تلجرام)
+/data
+
+# بيئة بايثون وجلسة تلجرام (تحتوي بيانات دخول حساسة)
+/scripts/.venv
+/scripts/*.session
+/scripts/*.session-journal
 
 # misc
 .DS_Store
@@ -39,3 +50,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# حالة أدوات Claude Code المحلية
+/.claude
+
+# مواد مصدرية محلية لا تُنشَر (تطبيق Flutter المصدر + APK + ملفّ الكشف PDF)
+/التطبيق
+*.apk
+/*.pdf
+
+# ملفّ نشر Actions: معطَّل مؤقتاً (يحتاج صلاحية workflow على التوكن)؛
+# النشر الحالي عبر فرع gh-pages. لتفعيل النشر التلقائي: امنح الصلاحية وأزِل هذا السطر.
+/.github/workflows/deploy.yml
