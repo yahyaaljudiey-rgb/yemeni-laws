@@ -8,7 +8,7 @@
     "preview": "npx -y serve out -l 3000",
     "start": "npx -y serve out -l 3000",
     "deploy": "next build && npx -y wrangler pages deploy out --project-name=yemeni-laws --branch=main",
-    "deploy:pages": "NEXT_PUBLIC_BASE_PATH=/yemeni-laws next build && npx -y gh-pages@6 -d out -b gh-pages --dotfiles -m \"تحديث النشر\"",
+    "deploy:pages": "bash scripts/deploy-pages.sh",
     "lint": "eslint"
   },
   "dependencies": {
