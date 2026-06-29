@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
 import "./globals.css";
 import PWA from "./pwa";
+import Splash from "./splash";
 import { asset } from "@/lib/base-path";
 
 const cairo = Cairo({
@@ -43,6 +44,7 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={`${cairo.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         {children}
+        <Splash />
         <PWA />
       </body>
     </html>
