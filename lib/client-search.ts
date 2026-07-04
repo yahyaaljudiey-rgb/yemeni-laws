@@ -73,6 +73,9 @@ export function normalizeAr(s: string): string {
     .replace(/ء/g, "")
     .replace(/ة/g, "ه")
     .replace(/ـ/g, "")
+    // إزالة الترقيم وأي رمز غير حرفي (يعامَل كفاصل كلمات). حاسم: بدونه تلتصق
+    // «؟» بآخر كلمة في السؤال فلا تطابق أي مادة (كل سؤال عربي ينتهي بـ«؟»).
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -84,11 +87,17 @@ const STOP = new Set([
   "ثم","بين","عند","لدى","غير","سوى","حتى","اذا","لكن","بعد","قبل","حول","ايضا",
 ]);
 
+// تجريد «ال» التعريفية إن بقيت كلمة ذات معنى (السرقة→سرقة) لتحسين التطابق؛
+// البحث بالمقطع الفرعي يطابق حينها الصيغتين (سرقة داخل السرقة).
+function stripAl(t: string): string {
+  return t.length > 4 && t.startsWith("ال") ? t.slice(2) : t;
+}
+
 // استخراج وحدات بحث مفيدة من نصّ مُطبَّع
 function queryTerms(qNorm: string): string[] {
   const seen = new Set<string>();
   for (const t of qNorm.split(" ")) {
-    if (t.length >= 2 && !STOP.has(t)) seen.add(t);
+    if (t.length >= 2 && !STOP.has(t)) seen.add(stripAl(t));
   }
   return [...seen];
 }
@@ -184,25 +193,39 @@ export async function clientSearch(
   if (effTerms.length === 0) return [];
   const phrase = qNorm.length >= 4 && qNorm.includes(" ") ? qNorm : null;
 
+  // وزن ندرة كل كلمة (IDF): الكلمة النادرة المميّزة («السرقة») تزن أضعاف
+  // الشائعة («عقوبة»)، وإلا طغت الكلمات الشائعة وأخرجت مواد غير ذات صلة.
+  const N = articles.length;
+  const idf = new Map<string, number>();
+  let idfTotal = 0;
+  for (const t of effTerms) {
+    let df = 0;
+    for (let i = 0; i < N; i++) if (normContent[i].includes(t)) df++;
+    const w = Math.log((N + 1) / (df + 1)) + 0.1;
+    idf.set(t, w);
+    idfTotal += w;
+  }
+  if (idfTotal === 0) idfTotal = 1;
+
   const scored: { i: number; score: number; kw: boolean }[] = [];
-  for (let i = 0; i < articles.length; i++) {
+  for (let i = 0; i < N; i++) {
     const hay = normContent[i];
+    let weight = 0;
     let hits = 0;
-    for (const t of effTerms) if (hay.includes(t)) hits++;
+    for (const t of effTerms) if (hay.includes(t)) { weight += idf.get(t)!; hits++; }
 
     const title = lawNormTitle.get(articles[i].law_id) ?? "";
-    let titleHits = 0;
-    for (const t of effTerms) if (title.includes(t)) titleHits++;
+    let titleWeight = 0;
+    for (const t of effTerms) if (title.includes(t)) titleWeight += idf.get(t)!;
 
-    if (hits === 0 && titleHits === 0) continue;
+    if (weight === 0 && titleWeight === 0) continue;
 
-    const coverage = hits / effTerms.length; // 0..1
-    let score = coverage;
-    if (hits === effTerms.length) score += 0.4; // كل الكلمات حاضرة
-    if (phrase && hay.includes(phrase)) score += 0.8; // العبارة كاملة
-    score += (titleHits / effTerms.length) * 0.5; // تطابق العنوان مهمّ
+    let score = weight / idfTotal; // تغطية مرجّحة بالندرة 0..1
+    if (hits === effTerms.length) score += 0.3; // كل الكلمات حاضرة
+    if (phrase && hay.includes(phrase)) score += 0.6; // العبارة كاملة
+    score += (titleWeight / idfTotal) * 0.4; // تطابق العنوان مهمّ
     // تفضيل المواد الأقصر قليلاً (أدقّ غالباً) عند تساوي الباقي
-    score += Math.max(0, 1 - hay.length / 4000) * 0.05;
+    score += Math.max(0, 1 - hay.length / 4000) * 0.03;
 
     scored.push({ i, score, kw: hits > 0 });
   }

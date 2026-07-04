@@ -64,7 +64,9 @@ export async function geminiChat(
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents,
-          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+          // gemini-2.5-flash موديل «تفكير»: مع سياق قانوني كبير قد يستهلك التفكيرُ
+          // الميزانية فيعود الردّ فارغاً. نرفع الحدّ لضمان بقاء نصّ الإجابة.
+          generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
         }),
         signal: controller.signal,
       },
