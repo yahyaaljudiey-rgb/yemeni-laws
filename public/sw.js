@@ -1,6 +1,6 @@
 // Service Worker لتطبيق Yemeni Laws
 // قابلية التثبيت + عمل دون إنترنت: قشرة التطبيق + حزمة البيانات الثابتة.
-const CACHE = "yemeni-laws-v22";
+const CACHE = "yemeni-laws-v25";
 // مسار القاعدة: يُشتقّ من موقع ملفّ الـSW نفسه ليعمل على الجذر أو على مسار فرعي
 // (مثل GitHub Pages: user.github.io/yemeni-laws/sw.js → BASE = "/yemeni-laws").
 const BASE = self.location.pathname.replace(/\/sw\.js$/, "");

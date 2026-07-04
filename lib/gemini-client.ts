@@ -22,6 +22,53 @@ function references(hits: ClientHit[]): string {
   }).join("\n\n---\n\n");
 }
 
+// توسيع السؤال: يحوّل صياغة المستخدم العاميّة إلى المصطلحات التي ترد فعلاً في
+// نصوص القوانين اليمنية (مثال: «التطليق للضرر» → «الفسخ للكراهية، الشقاق»).
+// يُستعمل لتحسين استرجاع المواد قبل إرسالها إلى المستشار. يفشل بصمت (يعيد "").
+export async function geminiExpandQuery(
+  apiKey: string,
+  query: string,
+): Promise<string> {
+  const key = apiKey.trim();
+  if (!key) return "";
+  const prompt =
+    `أنت خبير بمصطلحات التشريع اليمني. حوّل السؤال التالي إلى كلمات ومصطلحات ` +
+    `مفتاحية كما ترد في نصوص القوانين اليمنية الرسمية (استعمل ألفاظ التشريع لا ` +
+    `العاميّة؛ أمثلة: «تطليق للضرر» ⇒ الفسخ، الكراهية، الشقاق؛ «سجن» ⇒ الحبس؛ ` +
+    `«رشوة موظف» ⇒ الرشوة، الموظف العام، الإخلال بواجبات الوظيفة). ` +
+    `أعِد المصطلحات مفصولة بفواصل فقط، دون أي شرح أو ترقيم.\n\nالسؤال: ${query}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+        }),
+        signal: controller.signal,
+      },
+    );
+    if (!response.ok) return "";
+    const data = (await response.json().catch(() => null)) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    } | null;
+    const text = data?.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text || "")
+      .join(" ")
+      .trim();
+    // نظّف: استبدل الفواصل بمسافات ليصير استعلام بحث واحداً
+    return (text || "").replace(/[،,]/g, " ").replace(/\s+/g, " ").trim();
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function geminiChat(
   apiKey: string,
   messages: NexusMessage[],

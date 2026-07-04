@@ -20,7 +20,7 @@ import {
 import { clientAsk } from "@/lib/client-ask";
 import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/client-assistant";
 import { nexusChat, type NexusMessage } from "@/lib/nexus-client";
-import { geminiChat } from "@/lib/gemini-client";
+import { geminiChat, geminiExpandQuery } from "@/lib/gemini-client";
 
 const GEMINI_ONLY_BUILD = process.env.NEXT_PUBLIC_GEMINI_ONLY === "1";
 
@@ -249,6 +249,7 @@ function plainArticleText(content: string): string {
 
 interface AskSource {
   article_id: number;
+  law_id: number;
   law_title: string;
   law_number: string | null;
   year: string | null;
@@ -1810,7 +1811,36 @@ export default function Home() {
       } else {
         // المستشار: يفهم النيّة ويجيب، والمحادثة تُعرض وتُحفظ كتشات
         const a = await assistantAnswer(q);
-        if (a.hits && a.hits.length) setHits(a.hits as SearchHit[]);
+        let hits = a.hits;
+        // توسيع السؤال بمصطلحات التشريع اليمني عبر Gemini ثم إعادة الاسترجاع،
+        // لتجاوز اختلاف الألفاظ (تطليق للضرر ⇒ الفسخ للكراهية). ندمج مع الأصلية.
+        if (geminiKey.trim() && a.kind === "search") {
+          try {
+            const expanded = await geminiExpandQuery(geminiKey, q);
+            if (expanded) {
+              const extra = await clientSearch(expanded, 10);
+              const seen = new Set(hits.map((h) => h.article_id));
+              hits = [
+                ...hits,
+                ...extra.filter((h) => !seen.has(h.article_id)),
+              ].slice(0, 14);
+            }
+          } catch {
+            /* تجاهل: نكمل بالمواد الأصلية */
+          }
+        }
+        // لا نعرض قائمة المواد الطويلة أسفل الدردشة؛ المواد المرتبطة تظهر
+        // كروابط قابلة للضغط تحت الإجابة (sources) لفتح كل مادة على حدة.
+        setSources(
+          hits.slice(0, 10).map((hit) => ({
+            article_id: hit.article_id,
+            law_id: hit.law_id,
+            law_title: hit.law_title,
+            law_number: hit.law_number,
+            year: hit.year,
+            article_number: hit.article_number,
+          })),
+        );
         const userMsg: NexusMessage = { role: "user", content: q };
         const calculatorContext =
           a.kind === "search"
@@ -1821,9 +1851,9 @@ export default function Home() {
         // نصّ الإجابة الأوفلاينية (يُستعمل بلا مفتاح أو عند تعذّر النموذج)
         const offlineText =
           a.kind === "search"
-            ? a.hits.length
+            ? hits.length
               ? "أقرب المواد لسؤالك:\n" +
-                a.hits.slice(0, 6).map((h) =>
+                hits.slice(0, 6).map((h) =>
                   `• ${displayLawTitle(h.law_title, h.category)}${h.article_number ? ` — مادة (${h.article_number})` : ""}`,
                 ).join("\n")
               : "لم أجد مواد مطابقة. جرّب صياغة أخرى أو كلمات مفتاحية."
@@ -1835,14 +1865,10 @@ export default function Home() {
         try {
           if (geminiKey.trim()) {
             const reply = await geminiChat(
-              geminiKey, [...nexusHistory, userMsg], a.hits, calculatorContext, appKnowledge(), userName,
+              geminiKey, [...nexusHistory, userMsg], hits, calculatorContext, appKnowledge(), userName,
             );
             replyText = reply.content;
             model = reply.model;
-            setSources(a.hits.slice(0, 8).map((hit) => ({
-              article_id: hit.article_id, law_id: hit.law_id, law_title: hit.law_title,
-              law_number: hit.law_number, year: hit.year, article_number: hit.article_number,
-            })));
           } else if (nexusUrl.trim()) {
             const reply = await nexusChat(nexusUrl, [...nexusHistory, userMsg]);
             replyText = reply.content;
@@ -1905,7 +1931,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-5 pb-24">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-5 pb-24 flex flex-col">
         {mode === "home" ? (
           <HomeScreen
             apiKey={apiKey}
@@ -1940,8 +1966,14 @@ export default function Home() {
             {mode === "ask" ? "التبديل إلى البحث" : "اسأل المستشار بدلاً من ذلك"}
           </button>
         </div>
-        {/* صندوق الإدخال */}
-        <div className="bg-surface border border-border rounded-2xl p-3 shadow-sm">
+        {/* صندوق الإدخال: في الدردشة يلتصق بالأسفل تحت المحادثة (order-last) */}
+        <div
+          className={`bg-surface border border-border rounded-2xl p-3 shadow-sm ${
+            mode === "ask"
+              ? "order-last sticky bottom-16 z-20 shadow-lg mt-3"
+              : ""
+          }`}
+        >
           {mode === "search" && (
             <div
               className="inline-flex gap-1 rounded-xl border border-border bg-background p-1 mb-2"
@@ -2062,16 +2094,23 @@ export default function Home() {
               ))}
             </div>
             {sources.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {sources.map((s) => (
-                  <span
-                    key={s.article_id}
-                    className="text-xs px-3 py-1.5 rounded-full bg-surface border border-border text-muted"
-                  >
-                    {s.law_title}
-                    {s.article_number ? ` — مادة (${s.article_number})` : ""}
-                  </span>
-                ))}
+              <div className="mt-3">
+                <p className="text-xs text-muted mb-1.5">
+                  📎 المواد المرتبطة (اضغط لفتح المادة):
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {sources.map((s) => (
+                    <button
+                      key={s.article_id}
+                      onClick={() => openRef(s.law_id, s.article_number ?? "")}
+                      title="افتح نصّ المادة"
+                      className="text-xs px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-white transition-colors"
+                    >
+                      {s.law_title}
+                      {s.article_number ? ` — مادة (${s.article_number})` : ""}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             <p className="text-[11px] text-muted mt-3">
@@ -2250,7 +2289,7 @@ export default function Home() {
           </section>
         )}
 
-        {!hits && !answer && !error && !loading && (
+        {!hits && !answer && !error && !loading && nexusHistory.length === 0 && (
           <>
             <ArticleOfDay
               onRead={speakArticle}
@@ -2258,7 +2297,7 @@ export default function Home() {
               onRef={openRef}
             />
             <div className="text-center text-muted py-10 text-sm">
-              ابدأ بكتابة كلمة أو عبارة في الأعلى. البحث والحاسبات يعملان مجاناً
+              ابدأ بكتابة كلمة أو عبارة. البحث والحاسبات يعملان مجاناً
               ومحلياً على جهازك. لتفعيل «اسأل الذكاء الاصطناعي» أضِف مفتاحك الخاص من زرّ{" "}
               <button
                 onClick={() => setShowAi(true)}
