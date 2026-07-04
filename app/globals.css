@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8fa;
-  --foreground: #16202c;
+  --background: #f4f6f9;
+  --foreground: #14203a;
   --surface: #ffffff;
-  --border: #e3e7ec;
-  --primary: #0e6b5e;
-  --primary-strong: #0a5249;
+  --border: #dfe4ec;
+  --primary: #12294d;        /* كحلي داكن */
+  --primary-strong: #0c1c38;
   --muted: #5b6775;
-  --accent: #c9a227;
+  --accent: #b5891d;         /* ذهبي مقروء للنصوص */
+  --gold: #d4af37;           /* ذهبي لامع للزخرفة */
 }
 
 @theme inline {
@@ -20,19 +21,21 @@
   --color-primary-strong: var(--primary-strong);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
-  --font-sans: var(--font-cairo);
+  --color-gold: var(--gold);
+  --font-sans: var(--font-amiri), var(--font-cairo);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0e151c;
+    --background: #0a1220;
     --foreground: #e8edf2;
-    --surface: #18222d;
-    --border: #2a3744;
-    --primary: #2fb3a0;
-    --primary-strong: #25a08e;
-    --muted: #9aa7b4;
+    --surface: #111d33;
+    --border: #24344f;
+    --primary: #7ea0dd;        /* أزرق فاتح للتباين على الداكن */
+    --primary-strong: #6f93d6;
+    --muted: #94a3b8;
     --accent: #e0bd45;
+    --gold: #e0bd45;
   }
 }
 
@@ -43,14 +46,23 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
-  line-height: 1.7;
+  font-family: var(--font-amiri), var(--font-cairo), "Segoe UI", Tahoma, serif;
+  line-height: 1.8;
+  /* تحسين وضوح الحروف والتشكيل */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
 }
 
-/* تحسين عرض النصوص القانونية الطويلة */
+/* النصوص القانونية الطويلة: خط أميري غليظ وواضح، مع متّسع رأسي للتشكيل */
 .legal-text {
   white-space: pre-wrap;
   word-break: break-word;
+  font-family: var(--font-amiri), var(--font-cairo), serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  line-height: 2.15;
+  letter-spacing: 0;
 }
 
 /* ============ شاشة الترحيب المتحركة (ميزان العدل) ============ */
@@ -176,3 +188,127 @@ body {
   .yl-draw { animation-duration: 0.4s; }
   .yl-title, .yl-sub, .yl-sign { animation-delay: 0.2s; }
 }
+
+/* ============ توقيع المطوّر (تذييل/رأس) — هوية يحيى الجديعي ============ */
+.yl-footer-sign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+}
+.yl-footer-name {
+  font-weight: 700;
+  font-style: italic;
+  color: var(--gold);
+  letter-spacing: 1px;
+  font-size: 1.15rem;
+  text-shadow: 0 1px 8px rgba(212, 175, 55, 0.3);
+}
+.yl-footer-line {
+  display: block;
+  height: 1.5px;
+  width: 34px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.yl-footer-line:last-child {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+/* توقيع صغير في الرأس */
+.yl-head-sign {
+  font-style: italic;
+  font-weight: 700;
+  color: var(--gold);
+}
+/* شريط لوني رفيع أعلى الرأس (لمسة جمالية) */
+.yl-topbar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--gold), var(--primary));
+}
+
+/* ============ هيكل التطبيق (App Shell) — شريط علوي + سفلي + شاشة رئيسية ============ */
+/* شريط علوي كحلي */
+.yl-appbar {
+  background: linear-gradient(135deg, var(--primary-strong), var(--primary));
+  color: #fff;
+}
+.yl-appbar .yl-appbar-title { color: #fff; }
+.yl-appbar .yl-appbar-sign { color: var(--gold); font-style: italic; font-weight: 700; }
+.yl-appbar-btn {
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  transition: background 0.15s;
+}
+.yl-appbar-btn:hover { background: rgba(255,255,255,0.12); }
+
+/* شريط تنقّل سفلي ثابت */
+.yl-bottomnav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.yl-navbtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.yl-navbtn .yl-navicon { font-size: 1.25rem; line-height: 1; }
+.yl-navbtn.active { color: var(--primary); font-weight: 700; }
+.yl-navbtn.active .yl-navicon { transform: translateY(-1px); }
+
+/* بطاقات الشاشة الرئيسية */
+.yl-homecard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.2rem 0.6rem;
+  border-radius: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+  text-align: center;
+}
+.yl-homecard:hover, .yl-homecard:active {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 6px 18px rgba(18,41,77,0.12);
+}
+.yl-homecard-icon {
+  width: 3rem; height: 3rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 0.9rem;
+  font-size: 1.6rem;
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.yl-homecard-title { font-weight: 700; font-size: 0.95rem; color: var(--foreground); }
+.yl-homecard-sub { font-size: 0.7rem; color: var(--muted); }
+
+/* هيرو الشاشة الرئيسية */
+.yl-hero {
+  background: linear-gradient(135deg, var(--primary-strong), var(--primary));
+  color: #fff;
+  border-radius: 1.2rem;
+  padding: 1.5rem 1.2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.yl-hero-title { font-size: 1.5rem; font-weight: 700; }
+.yl-hero-sub { font-size: 0.8rem; opacity: 0.85; margin-top: 0.2rem; }
+.yl-hero-sign { margin-top: 0.5rem; color: var(--gold); font-style: italic; font-weight: 700; font-size: 0.85rem; }

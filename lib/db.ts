@@ -46,6 +46,7 @@ export function getDb(): Database.Database {
       amend_year     INTEGER,
       amend_status   TEXT,
       amend_note     TEXT,
+      amended_text   TEXT,
       created_at     TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (law_id) REFERENCES laws(id) ON DELETE CASCADE
     );
@@ -59,6 +60,8 @@ export function getDb(): Database.Database {
   if (!cols.has("amend_year")) db.exec(`ALTER TABLE articles ADD COLUMN amend_year INTEGER;`);
   if (!cols.has("amend_status")) db.exec(`ALTER TABLE articles ADD COLUMN amend_status TEXT;`);
   if (!cols.has("amend_note")) db.exec(`ALTER TABLE articles ADD COLUMN amend_note TEXT;`);
+  // amended_text: نص ما بعد 2014 (يُعرض خلف زر؛ المحتوى الأساسي يبقى نسخة ما قبل 2014)
+  if (!cols.has("amended_text")) db.exec(`ALTER TABLE articles ADD COLUMN amended_text TEXT;`);
 
   // فهرس بحث نصي كامل (FTS5) مع إزالة التشكيل لتطابق أفضل في العربية
   db.exec(`
@@ -97,6 +100,7 @@ export interface Article {
   amend_year: number | null;
   amend_status: string | null;
   amend_note: string | null;
+  amended_text: string | null;
   created_at: string;
 }
 

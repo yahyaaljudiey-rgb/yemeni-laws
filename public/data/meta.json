@@ -1,7 +1,7 @@
 {
-  "count": 22852,
+  "count": 24465,
   "dim": 384,
-  "lawCount": 297,
+  "lawCount": 301,
   "model": "Xenova/multilingual-e5-small",
   "shards": [
     {
@@ -10,8 +10,8 @@
     },
     {
       "name": "embeddings-001.bin",
-      "bytes": 10983936
+      "bytes": 13461504
     }
   ],
-  "generatedAt": "2026-06-29T12:12:19.200Z"
+  "generatedAt": "2026-07-01T01:02:39.996Z"
 }

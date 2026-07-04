@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">القوانين اليمنية</string>
+    <string name="title_activity_main">القوانين اليمنية</string>
+    <string name="package_name">io.github.yahyaaljudiey.yemenilaws.offline</string>
+    <string name="custom_url_scheme">io.github.yahyaaljudiey.yemenilaws.offline</string>
+</resources>

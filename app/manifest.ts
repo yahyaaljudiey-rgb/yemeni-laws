@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Yemeni Laws — القوانين اليمنية",
     short_name: "Yemeni Laws",
     description:
-      "مكتبة ذكية للقوانين اليمنية: بحث دلالي وإجابات بالذكاء الاصطناعي مع تمييز التعديلات.",
+      "مكتبة ذكية للقوانين اليمنية: بحث سريع وتصفّح مرتّب وإجابات بالذكاء الاصطناعي مع تمييز التعديلات.",
     start_url: asset("/"),
     scope: asset("/"),
     display: "standalone",

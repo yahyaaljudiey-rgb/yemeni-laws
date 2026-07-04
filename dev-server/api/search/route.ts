@@ -35,7 +35,7 @@ function buildFtsQuery(q: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, limit = 20 } = (await req.json()) as {
+    const { query, limit = 200 } = (await req.json()) as {
       query?: string;
       limit?: number;
     };
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         const ftsRows = db
           .prepare(
             `SELECT rowid FROM articles_fts WHERE articles_fts MATCH ?
-             ORDER BY bm25(articles_fts) LIMIT 80`,
+             ORDER BY bm25(articles_fts) LIMIT 300`,
           )
           .all(ftsQuery) as { rowid: number }[];
         for (const r of ftsRows) {
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     // 3) ترتيب أعلى النتائج
     const top = [...scores.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, Math.min(limit, 50));
+      .slice(0, Math.min(limit, 200));
 
     if (top.length === 0) {
       return NextResponse.json({ hits: [] });

@@ -1,8 +1,8 @@
-// بحث دلالي في المتصفّح (offline-first) فوق حزمة البيانات الثابتة في public/data
-// يحمّل المتجهات والنصوص مرّة، ويولّد متجه السؤال محلياً عبر transformers.js.
-// لا خادم: يعمل دون إنترنت بعد تحميل الحزمة والنموذج أول مرّة.
+// بحث في المتصفّح (offline-first) فوق حزمة البيانات الثابتة في public/data.
+// البحث الأساسي لفظيّ ذكيّ (تطبيع عربي + ترجيح) يعمل فوراً على أي جهاز بلا
+// تنزيل أي نموذج. المتجهات تُحمَّل فقط عند الحاجة (المواد المشابهة).
+// لا خادم: يعمل دون إنترنت بعد تحميل الحزمة أول مرّة.
 
-import type { FeatureExtractionPipeline } from "@huggingface/transformers";
 import { BASE_PATH } from "./base-path";
 
 export interface ClientHit {
@@ -20,6 +20,7 @@ export interface ClientHit {
   amend_year: number | null;
   amend_status: string | null;
   amend_note: string | null;
+  amended_text: string | null;
 }
 
 interface BundleLaw {
@@ -38,6 +39,7 @@ interface BundleArticle {
   amend_year: number | null;
   amend_status: string | null;
   amend_note: string | null;
+  amended_text: string | null;
 }
 interface BundleMeta {
   count: number;
@@ -48,54 +50,90 @@ interface BundleMeta {
   generatedAt: string;
 }
 
-interface Bundle {
+// حزمة النصوص (خفيفة): تُحمَّل للبحث والتصفّح دون أي متجهات أو نماذج
+interface TextBundle {
   meta: BundleMeta;
   laws: Map<number, BundleLaw>;
+  lawNormTitle: Map<number, string>; // عنوان مُطبَّع لكل قانون (لترجيح العنوان)
   articles: BundleArticle[];
-  vectors: Float32Array; // مُعبَّأة count×dim
   normContent: string[]; // نصوص مُطبَّعة للبحث اللفظي
 }
 
-let _bundle: Promise<Bundle> | null = null;
-let _extractor: Promise<FeatureExtractionPipeline> | null = null;
+let _text: Promise<TextBundle> | null = null;
+let _vectors: Promise<Float32Array> | null = null;
 
-// تطبيع عربي بسيط للبحث اللفظي: إزالة التشكيل وتوحيد الألف والتاء المربوطة
+// تطبيع عربي للبحث اللفظي: إزالة التشكيل وتوحيد الألف والياء والتاء المربوطة والهمزات
 export function normalizeAr(s: string): string {
   return s
     .replace(/[ً-ْٰ]/g, "") // تشكيل
     .replace(/[إأآا]/g, "ا")
     .replace(/ى/g, "ي")
+    .replace(/ؤ/g, "و")
+    .replace(/ئ/g, "ي")
+    .replace(/ء/g, "")
     .replace(/ة/g, "ه")
     .replace(/ـ/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// تحميل حزمة البيانات مرّة واحدة (مع تخزينها في الذاكرة)
-export function loadBundle(): Promise<Bundle> {
-  if (!_bundle) {
-    _bundle = (async () => {
+// كلمات وقف عربية شائعة لا تفيد في الترجيح
+const STOP = new Set([
+  "في","من","الى","على","عن","مع","هل","ما","ماذا","كيف","متى","اين","لماذا",
+  "هي","هو","هذا","هذه","ذلك","التي","الذي","ان","انه","كان","قد","كل","او","ام",
+  "ثم","بين","عند","لدى","غير","سوى","حتى","اذا","لكن","بعد","قبل","حول","ايضا",
+]);
+
+// استخراج وحدات بحث مفيدة من نصّ مُطبَّع
+function queryTerms(qNorm: string): string[] {
+  const seen = new Set<string>();
+  for (const t of qNorm.split(" ")) {
+    if (t.length >= 2 && !STOP.has(t)) seen.add(t);
+  }
+  return [...seen];
+}
+
+// تحميل النصوص مرّة واحدة (خفيف — لا متجهات)
+export function loadText(): Promise<TextBundle> {
+  if (!_text) {
+    _text = (async () => {
       const [metaRes, lawsRes, artsRes] = await Promise.all([
         fetch(`${BASE_PATH}/data/meta.json`),
         fetch(`${BASE_PATH}/data/laws.json`),
         fetch(`${BASE_PATH}/data/articles.json`),
       ]);
-      if (!metaRes.ok) {
-        throw new Error("حزمة البيانات غير متوفّرة بعد");
-      }
+      if (!metaRes.ok) throw new Error("حزمة البيانات غير متوفّرة بعد");
       const meta = (await metaRes.json()) as BundleMeta;
       const lawsArr = (await lawsRes.json()) as BundleLaw[];
       const articles = (await artsRes.json()) as BundleArticle[];
 
-      // المتجهات مُقسَّمة إلى أجزاء (حدّ 25MB للملف على Cloudflare Pages)؛
-      // نجلبها ونعيد تجميعها بايتياً بالترتيب. (توافق رجعي مع الملفّ الموحَّد القديم.)
+      const laws = new Map<number, BundleLaw>();
+      const lawNormTitle = new Map<number, string>();
+      for (const l of lawsArr) {
+        laws.set(l.id, l);
+        lawNormTitle.set(l.id, normalizeAr(l.title));
+      }
+      const normContent = articles.map((a) =>
+        normalizeAr(`${a.heading ?? ""} ${a.content}`),
+      );
+      return { meta, laws, lawNormTitle, articles, normContent };
+    })();
+  }
+  return _text;
+}
+
+// تحميل المتجهات عند الطلب فقط (للمواد المشابهة) — حدّ 25MB للملف ⇒ أجزاء
+function loadVectors(): Promise<Float32Array> {
+  if (!_vectors) {
+    _vectors = (async () => {
+      const meta = (await loadText()).meta;
       const shardNames = meta.shards?.length
         ? meta.shards.map((s) => s.name)
         : ["embeddings.bin"];
       const bufs = await Promise.all(
         shardNames.map(async (name) => {
           const r = await fetch(`${BASE_PATH}/data/${name}`);
-          if (!r.ok) throw new Error("حزمة البيانات غير متوفّرة بعد");
+          if (!r.ok) throw new Error("متجهات الحزمة غير متوفّرة");
           return r.arrayBuffer();
         }),
       );
@@ -106,43 +144,10 @@ export function loadBundle(): Promise<Bundle> {
         merged.set(new Uint8Array(b), off);
         off += b.byteLength;
       }
-      const vectors = new Float32Array(merged.buffer);
-
-      const laws = new Map<number, BundleLaw>();
-      for (const l of lawsArr) laws.set(l.id, l);
-
-      const normContent = articles.map((a) =>
-        normalizeAr(`${a.heading ?? ""} ${a.content}`),
-      );
-
-      return { meta, laws, articles, vectors, normContent };
+      return new Float32Array(merged.buffer);
     })();
   }
-  return _bundle;
-}
-
-// تحميل نموذج التضمين في المتصفّح (تنزيل لمرّة واحدة، يُخزَّن في الكاش)
-async function getExtractor(): Promise<FeatureExtractionPipeline> {
-  if (!_extractor) {
-    _extractor = (async () => {
-      const { pipeline, env } = await import("@huggingface/transformers");
-      // في المتصفّح: نُنزّل النموذج من مستودع HuggingFace ونعتمد الكاش
-      env.allowLocalModels = false;
-      return pipeline("feature-extraction", "Xenova/multilingual-e5-small");
-    })();
-  }
-  return _extractor;
-}
-
-async function embedQuery(text: string, dim: number): Promise<Float32Array> {
-  const extractor = await getExtractor();
-  const clean = `query: ${text.replace(/\s+/g, " ").trim()}`;
-  const out = await extractor(clean, { pooling: "mean", normalize: true });
-  const v = Float32Array.from(out.data as Float32Array);
-  if (v.length !== dim) {
-    throw new Error("بُعد متجه السؤال غير متطابق مع الحزمة");
-  }
-  return v;
+  return _vectors;
 }
 
 // هل الحزمة جاهزة (للتبديل بين الوضع المحلي والخادم)؟
@@ -162,39 +167,44 @@ export async function offlineReady(): Promise<boolean> {
   return _offline;
 }
 
-const KEYWORD_BOOST = 0.12;
-
-// بحث هجين: تشابه دلالي + دفعة لفظية، يحاكي منطق الخادم
+// بحث لفظيّ ذكيّ: يعمل فوراً على أي جهاز (بلا نموذج/تنزيل). يرجّح بتغطية
+// الكلمات، وتطابق العبارة كاملة، وظهورها في العنوان أو الترويسة.
 export async function clientSearch(
   query: string,
-  limit = 20,
+  limit = 200,
 ): Promise<ClientHit[]> {
   const q = query.trim();
   if (!q) return [];
-  const bundle = await loadBundle();
-  const { meta, articles, vectors, normContent, laws } = bundle;
-  const dim = meta.dim;
+  const { articles, normContent, laws, lawNormTitle } = await loadText();
 
-  const qVec = await embedQuery(q, dim);
   const qNorm = normalizeAr(q);
-  const qTokens = qNorm.split(" ").filter((t) => t.length >= 3);
+  const terms = queryTerms(qNorm);
+  // إن لم تبقَ كلمات مفيدة (سؤال كلّه كلمات وقف)، نستعمل النص المُطبَّع كلّه
+  const effTerms = terms.length ? terms : qNorm ? [qNorm] : [];
+  if (effTerms.length === 0) return [];
+  const phrase = qNorm.length >= 4 && qNorm.includes(" ") ? qNorm : null;
 
-  const scored: { i: number; score: number; kw: boolean }[] = new Array(
-    articles.length,
-  );
+  const scored: { i: number; score: number; kw: boolean }[] = [];
   for (let i = 0; i < articles.length; i++) {
-    // تشابه جيب التمام (المتجهات مُطبَّعة ⇒ ضرب نقطي)
-    let dot = 0;
-    const off = i * dim;
-    for (let d = 0; d < dim; d++) dot += qVec[d] * vectors[off + d];
+    const hay = normContent[i];
+    let hits = 0;
+    for (const t of effTerms) if (hay.includes(t)) hits++;
 
-    // دفعة لفظية إن ظهرت كلمات السؤال في نص المادة
-    let kw = false;
-    if (qTokens.length) {
-      const hay = normContent[i];
-      kw = qTokens.some((t) => hay.includes(t));
-    }
-    scored[i] = { i, score: dot + (kw ? KEYWORD_BOOST : 0), kw };
+    const title = lawNormTitle.get(articles[i].law_id) ?? "";
+    let titleHits = 0;
+    for (const t of effTerms) if (title.includes(t)) titleHits++;
+
+    if (hits === 0 && titleHits === 0) continue;
+
+    const coverage = hits / effTerms.length; // 0..1
+    let score = coverage;
+    if (hits === effTerms.length) score += 0.4; // كل الكلمات حاضرة
+    if (phrase && hay.includes(phrase)) score += 0.8; // العبارة كاملة
+    score += (titleHits / effTerms.length) * 0.5; // تطابق العنوان مهمّ
+    // تفضيل المواد الأقصر قليلاً (أدقّ غالباً) عند تساوي الباقي
+    score += Math.max(0, 1 - hay.length / 4000) * 0.05;
+
+    scored.push({ i, score, kw: hits > 0 });
   }
 
   scored.sort((a, b) => b.score - a.score);
@@ -218,17 +228,78 @@ export async function clientSearch(
       amend_year: a.amend_year,
       amend_status: a.amend_status,
       amend_note: a.amend_note,
+      amended_text: a.amended_text,
     };
   });
 }
 
 // مواد مشابهة لمادة معيّنة (دون خادم) — اعتماداً على متجهها المخزَّن في الحزمة
+// بحث لفظيّ صارم: يُظهر فقط المواد التي تحتوي **نفس اللفظة/العبارة حرفياً**
+// (تطبيع عربي فقط: تشكيل/همزات/ألف/ياء)، دون مشابهات ولا تطابق العنوان.
+export async function clientLiteralSearch(
+  query: string,
+  limit = 300,
+): Promise<ClientHit[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const { articles, normContent, laws } = await loadText();
+  const qn = normalizeAr(q);
+  const terms = qn.split(" ").filter((t) => t.length >= 2);
+  if (terms.length === 0) return [];
+  const phrase = qn.includes(" ") ? qn : null;
+
+  const countOcc = (hay: string, needle: string) => {
+    let c = 0,
+      idx = 0;
+    while ((idx = hay.indexOf(needle, idx)) !== -1) {
+      c++;
+      idx += needle.length;
+    }
+    return c;
+  };
+
+  const scored: { i: number; score: number }[] = [];
+  for (let i = 0; i < articles.length; i++) {
+    const hay = normContent[i];
+    if (phrase && hay.includes(phrase)) {
+      scored.push({ i, score: 100000 + countOcc(hay, phrase) });
+    } else if (terms.every((t) => hay.includes(t))) {
+      // كل الكلمات حاضرة حرفياً (وإن تباعدت)
+      const total = terms.reduce((s, t) => s + countOcc(hay, t), 0);
+      scored.push({ i, score: total });
+    }
+    // غير ذلك: ليس تطابقاً لفظياً → يُستبعد
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit).map(({ i, score }) => {
+    const a = articles[i];
+    const law = laws.get(a.law_id);
+    return {
+      article_id: a.id,
+      law_id: a.law_id,
+      law_title: law?.title ?? "",
+      law_number: law?.law_number ?? null,
+      year: law?.year ?? null,
+      category: law?.category ?? null,
+      article_number: a.article_number,
+      heading: a.heading,
+      content: a.content,
+      score,
+      matched_keyword: true,
+      amend_year: a.amend_year,
+      amend_status: a.amend_status,
+      amend_note: a.amend_note,
+      amended_text: a.amended_text,
+    };
+  });
+}
+
 export async function clientSimilar(
   articleId: number,
   limit = 5,
 ): Promise<ClientHit[]> {
-  const bundle = await loadBundle();
-  const { meta, articles, vectors, laws } = bundle;
+  const { meta, articles, laws } = await loadText();
+  const vectors = await loadVectors();
   const dim = meta.dim;
   const baseIdx = articles.findIndex((a) => a.id === articleId);
   if (baseIdx < 0) return [];
@@ -262,6 +333,7 @@ export async function clientSimilar(
       amend_year: a.amend_year,
       amend_status: a.amend_status,
       amend_note: a.amend_note,
+      amended_text: a.amended_text,
     };
   });
 }
@@ -271,7 +343,7 @@ export async function clientArticle(
   lawId: number,
   articleNumber: string,
 ): Promise<ClientHit | null> {
-  const bundle = await loadBundle();
+  const bundle = await loadText();
   const { articles, laws } = bundle;
   const a = articles.find(
     (x) => x.law_id === lawId && x.article_number === String(articleNumber),
@@ -293,12 +365,13 @@ export async function clientArticle(
     amend_year: a.amend_year,
     amend_status: a.amend_status,
     amend_note: a.amend_note,
+    amended_text: a.amended_text,
   };
 }
 
 // مادة اليوم (نفس منطق البذرة في الخادم) — دون خادم
 export async function clientArticleOfDay(): Promise<ClientHit | null> {
-  const bundle = await loadBundle();
+  const bundle = await loadText();
   const { articles, laws } = bundle;
   const pool = articles.filter(
     (a) =>
@@ -330,6 +403,7 @@ export async function clientArticleOfDay(): Promise<ClientHit | null> {
     amend_year: a.amend_year,
     amend_status: a.amend_status,
     amend_note: a.amend_note,
+    amended_text: a.amended_text,
   };
 }
 
@@ -345,7 +419,7 @@ export interface ClientLaw {
 
 // قائمة كل الوثائق (للتصفّح في المكتبة) — دون خادم
 export async function clientLawList(): Promise<ClientLaw[]> {
-  const bundle = await loadBundle();
+  const bundle = await loadText();
   const counts = new Map<number, number>();
   for (const a of bundle.articles) {
     counts.set(a.law_id, (counts.get(a.law_id) ?? 0) + 1);
@@ -363,7 +437,7 @@ export async function clientLawList(): Promise<ClientLaw[]> {
 // كل مواد وثيقة بالترتيب (لعرضها ككتاب) — دون خادم.
 // مصفوفة الحزمة مُرتّبة أصلاً حسب (law_id, ordering, id) فالترشيح يحفظ الترتيب.
 export async function clientLawArticles(lawId: number): Promise<ClientHit[]> {
-  const bundle = await loadBundle();
+  const bundle = await loadText();
   const { articles, laws } = bundle;
   const law = laws.get(lawId);
   return articles
@@ -383,6 +457,7 @@ export async function clientLawArticles(lawId: number): Promise<ClientHit[]> {
       amend_year: a.amend_year,
       amend_status: a.amend_status,
       amend_note: a.amend_note,
+      amended_text: a.amended_text,
     }));
 }
 
@@ -391,7 +466,7 @@ export async function clientVersions(
   lawId: number,
   articleNumber: string,
 ): Promise<ClientHit[]> {
-  const bundle = await loadBundle();
+  const bundle = await loadText();
   const { articles, laws } = bundle;
   const law = laws.get(lawId);
   return articles
@@ -413,5 +488,6 @@ export async function clientVersions(
       amend_year: a.amend_year,
       amend_status: a.amend_status,
       amend_note: a.amend_note,
+      amended_text: a.amended_text,
     }));
 }

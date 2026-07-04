@@ -17,6 +17,10 @@ NEXT_PUBLIC_BASE_PATH="$BASE" npm run build
 
 touch out/.nojekyll   # ضروري ليخدم GitHub مجلّد _next/
 
+# النموذج الدلالي وملفات WASM تُغلَّف في APK فقط (تتجاوز حدّ GitHub 100MB للملف).
+# السحاب يرتدّ تلقائياً للبحث اللفظي إن غابا.
+rm -rf out/models out/ort
+
 echo "» دفع out/ إلى فرع gh-pages ..."
 TOKEN="$(gh auth token)"
 cd out

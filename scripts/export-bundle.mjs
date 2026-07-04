@@ -35,7 +35,7 @@ function main() {
   const rows = db
     .prepare(
       `SELECT id, law_id, article_number, heading, content, ordering,
-              amend_year, amend_status, amend_note, embedding
+              amend_year, amend_status, amend_note, amended_text, embedding
        FROM articles
        WHERE embedding IS NOT NULL
        ORDER BY law_id, ordering, id`,
@@ -70,6 +70,7 @@ function main() {
       amend_year: r.amend_year,
       amend_status: r.amend_status,
       amend_note: r.amend_note,
+      amended_text: r.amended_text,
     };
   }
 

@@ -2,8 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import SiteFooter from "../site-footer";
+import AppBottomNav from "../app-bottom-nav";
 import {
   FEE_SCHEDULES,
+  FIXED_FEES,
+  FIXED_FEE_GROUPS,
+  VALUE_BASES,
+  ARTICLE5_TEXT,
   computeCourtFee,
   formatYER,
   type FeeSchedule,
@@ -22,34 +28,39 @@ import {
   type Heirs,
   type Frac,
 } from "@/lib/calculators/inheritance";
+import {
+  DIYA_INJURIES,
+  FULL_DIYA_ORGANS,
+  diyaAmount,
+  type DiyaGender,
+  type DiyaIntent,
+  type DiyaInjury,
+} from "@/lib/calculators/diya";
 
-type Tool = "fees" | "deadlines" | "inheritance";
+type Tool = "fees" | "deadlines" | "inheritance" | "diya";
 
 export default function ToolsPage() {
   const [tool, setTool] = useState<Tool>("fees");
 
   return (
-    <div className="flex flex-col min-h-full">
-      <header className="border-b border-border bg-surface">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-primary tracking-tight">
+    <div className="flex flex-col min-h-full pb-16">
+      <header className="yl-appbar sticky top-0 z-30 shadow-md">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="leading-tight">
+            <span className="yl-appbar-title block font-bold text-lg">
               الحاسبات القانونية
-            </h1>
-            <p className="text-xs sm:text-sm text-muted mt-1">
-              أدوات حسابية مبنية على نصوص القوانين اليمنية
-            </p>
+            </span>
+            <span className="yl-appbar-sign block text-[11px]">
+              تطوير: يحيى الجديعي
+            </span>
           </div>
-          <Link
-            href="/"
-            className="text-sm px-3 py-2 rounded-lg border border-border hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
-          >
+          <Link href="/" className="yl-appbar-btn text-sm whitespace-nowrap">
             ← الرئيسية
           </Link>
         </div>
       </header>
 
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-6">
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 pb-24">
         <div className="inline-flex flex-wrap rounded-xl border border-border bg-surface p-1 mb-5 gap-1">
           <TabButton active={tool === "fees"} onClick={() => setTool("fees")}>
             الرسوم القضائية
@@ -66,16 +77,19 @@ export default function ToolsPage() {
           >
             المواريث
           </TabButton>
+          <TabButton active={tool === "diya"} onClick={() => setTool("diya")}>
+            الديات والأروش
+          </TabButton>
         </div>
 
         {tool === "fees" && <CourtFeesCalculator />}
         {tool === "deadlines" && <DeadlinesCalculator />}
         {tool === "inheritance" && <InheritanceCalculator />}
+        {tool === "diya" && <DiyaCalculator />}
       </main>
 
-      <footer className="border-t border-border text-center text-xs text-muted py-4">
-        النتائج استرشادية؛ المرجع النهائي هو النص الرسمي للقانون والمختص القانوني.
-      </footer>
+      <SiteFooter />
+      <AppBottomNav active="tools" />
     </div>
   );
 }
@@ -112,16 +126,25 @@ function ComingSoon({ name }: { name: string }) {
 // ————————————————————————————— حاسبة الرسوم القضائية —————————————————————————————
 
 function CourtFeesCalculator() {
+  const [feeMode, setFeeMode] = useState<"value" | "fixed">("value");
   const [raw, setRaw] = useState("");
+  const [basisKey, setBasisKey] = useState(VALUE_BASES[0].key);
   const [scheduleKey, setScheduleKey] = useState<FeeSchedule["key"]>(
-    "recognized",
+    "aden2025",
   );
+
+  const basis = VALUE_BASES.find((b) => b.key === basisKey) ?? VALUE_BASES[0];
+  const [fixedKey, setFixedKey] = useState(FIXED_FEES[0].key);
+  const [unitCount, setUnitCount] = useState(1);
 
   const schedule =
     FEE_SCHEDULES.find((s) => s.key === scheduleKey) ?? FEE_SCHEDULES[0];
 
   const value = useMemo(() => {
-    const digits = raw.replace(/[^\d]/g, "");
+    // نحوّل الأرقام العربية-الهندية (المعروضة) إلى لاتينية أولاً، ثم نُبقي الأرقام فقط
+    const digits = raw
+      .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+      .replace(/[^\d]/g, "");
     return digits ? parseInt(digits, 10) : 0;
   }, [raw]);
 
@@ -130,12 +153,73 @@ function CourtFeesCalculator() {
     [value, schedule],
   );
 
+  const fixed = FIXED_FEES.find((f) => f.key === fixedKey) ?? FIXED_FEES[0];
+  const fixedTotal = fixed.amount * Math.max(1, unitCount);
+
   return (
     <div className="space-y-5">
+      {/* مبدّل نوع الرسم */}
+      <div className="inline-flex rounded-xl border border-border bg-surface p-1 gap-1">
+        <button
+          onClick={() => setFeeMode("value")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            feeMode === "value" ? "bg-primary text-white" : "text-muted hover:text-foreground"
+          }`}
+        >
+          دعوى معلومة القيمة (نسبي)
+        </button>
+        <button
+          onClick={() => setFeeMode("fixed")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            feeMode === "fixed" ? "bg-primary text-white" : "text-muted hover:text-foreground"
+          }`}
+        >
+          رسوم ثابتة (حسب النوع)
+        </button>
+      </div>
+
+      {feeMode === "fixed" ? (
+        <FixedFeesCalculator
+          fixedKey={fixedKey}
+          setFixedKey={setFixedKey}
+          unitCount={unitCount}
+          setUnitCount={setUnitCount}
+          fixed={fixed}
+          total={fixedTotal}
+        />
+      ) : (
+        <>
+      <p className="text-xs text-muted leading-6 -mt-1">
+        هذا الوضع يحسب <b>الرسم النسبي</b> على دعاوى المنازعات المدنية والتجارية
+        والإدارية <b>معلومة القيمة</b> (المادة 5). للرسوم الأخرى (أحوال شخصية،
+        تنفيذ، طعون…) اختر «رسوم ثابتة».
+      </p>
       <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1.5">
-            قيمة الدعوى (بالريال اليمني)
+            نوع الدعوى (لتحديد أساس القيمة)
+          </label>
+          <select
+            value={basisKey}
+            onChange={(e) => setBasisKey(e.target.value)}
+            className="w-full bg-transparent border border-border rounded-xl px-3 py-2.5 text-base outline-none focus:border-primary transition-colors"
+          >
+            {VALUE_BASES.map((b) => (
+              <option key={b.key} value={b.key}>
+                {b.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted leading-6 bg-primary/5 border border-primary/15 rounded-lg p-2.5 mt-2">
+            <span className="font-bold text-foreground">أساس القيمة: </span>
+            {basis.basis} <span className="opacity-70">(المادة 6)</span>
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            {basisKey === "tax"
+              ? "قيمة الدعوى المقدَّرة (بواسطة خبير) بالريال"
+              : "قيمة الدعوى (بالريال اليمني)"}
           </label>
           <input
             inputMode="numeric"
@@ -188,7 +272,7 @@ function CourtFeesCalculator() {
       {!schedule.recognized && (
         <p className="text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg p-3">
           ⚠ أنت تحسب وفق تعديل صادر في صنعاء بعد 2014 وهو غير معترف به. النِّسب
-          الرسمية المعتمدة هي «الصيغة الأصلية».
+          الرسمية المعتمدة هي «صيغة عدن 2025».
         </p>
       )}
 
@@ -216,40 +300,161 @@ function CourtFeesCalculator() {
 
           <div className="border-t border-border pt-3 mt-3">
             <h3 className="text-xs font-bold text-muted mb-2">
-              تفصيل الشرائح
+              {schedule.flat ? "طريقة الحساب" : "تفصيل الشرائح"}
             </h3>
             <div className="space-y-1.5">
-              {result.rows.map((r, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-2 text-xs"
-                >
+              {schedule.flat ? (
+                <div className="flex items-center justify-between gap-2 text-xs">
                   <span className="text-muted">
-                    {r.to == null
-                      ? `ما زاد عن ${formatYER(r.from)}`
-                      : `${formatYER(r.from)} – ${formatYER(r.to)}`}{" "}
-                    × {(r.rate * 100).toLocaleString("ar-YE")}٪
+                    {formatYER(value)} × {(result.rows[0]?.rate ?? 0) * 100}٪
+                    (النسبة حسب شريحة المبلغ)
                   </span>
-                  <span className="font-medium">{formatYER(r.fee)} ريال</span>
+                  <span className="font-medium">
+                    {formatYER(result.rawFee)} ريال
+                  </span>
                 </div>
-              ))}
+              ) : (
+                result.rows.map((r, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between gap-2 text-xs"
+                  >
+                    <span className="text-muted">
+                      {r.to == null
+                        ? `ما زاد عن ${formatYER(r.from)}`
+                        : `${formatYER(r.from)} – ${formatYER(r.to)}`}{" "}
+                      × {(r.rate * 100).toLocaleString("ar-YE")}٪
+                    </span>
+                    <span className="font-medium">{formatYER(r.fee)} ريال</span>
+                  </div>
+                ))
+              )}
               {result.minApplied && (
                 <div className="flex items-center justify-between gap-2 text-xs text-muted">
-                  <span>مجموع الشرائح قبل الحدّ الأدنى</span>
+                  <span>الرسم قبل تطبيق الحدّ الأدنى</span>
                   <span>{formatYER(result.rawFee)} ريال</span>
                 </div>
               )}
             </div>
           </div>
 
-          <p className="text-xs text-muted mt-4 leading-6">
-            المصدر: المادة (5) من قانون الرسوم القضائية رقم (26) لسنة 2013م.
-            النتيجة استرشادية وقد تُضاف رسوم أخرى (تنفيذ، إعلانات، خبرة…) بحسب
-            نوع الدعوى ومرحلتها.
+          {value > 0 && (
+            <p className="text-xs text-primary bg-primary/5 border border-primary/15 rounded-lg p-2.5 mt-3 leading-6">
+              💡 يُحصَّل <b>80%</b> من الرسم عند رفع الدعوى (
+              {formatYER(Math.round(result.fee * 0.8))} ريال)، والباقي عند إصدار
+              الحكم (المادة 12).
+            </p>
+          )}
+
+          <div className="border-t border-border mt-4 pt-3">
+            <h3 className="text-xs font-bold text-muted mb-1.5">
+              نصّ المادة (5)
+            </h3>
+            <p className="legal-text text-sm">{ARTICLE5_TEXT}</p>
+          </div>
+          <p className="text-xs text-muted mt-3 leading-6">
+            المصدر: المادة (5) من قانون الرسوم القضائية رقم (26) لسنة 2013م،
+            بصيغتها المعدَّلة بقرار رئيس مجلس القضاء الأعلى رقم (41) لسنة 2025م
+            (عدن). النتيجة استرشادية وقد تُضاف رسوم أخرى (تنفيذ، إعلانات، خبرة…)
+            بحسب نوع الدعوى ومرحلتها.
           </p>
         </div>
       )}
+        </>
+      )}
     </div>
+  );
+}
+
+// جدول الرسوم الثابتة حسب نوع الدعوى/الطلب
+function FixedFeesCalculator({
+  fixedKey,
+  setFixedKey,
+  unitCount,
+  setUnitCount,
+  fixed,
+  total,
+}: {
+  fixedKey: string;
+  setFixedKey: (k: string) => void;
+  unitCount: number;
+  setUnitCount: (n: number) => void;
+  fixed: (typeof FIXED_FEES)[number];
+  total: number;
+}) {
+  return (
+    <>
+      <p className="text-xs text-muted leading-6 -mt-1">
+        اختر نوع الدعوى أو الطلب ليظهر رسمه الثابت وفق قرار عدن رقم (41) لسنة
+        2025م.
+      </p>
+      <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            نوع الدعوى / الطلب
+          </label>
+          <select
+            value={fixedKey}
+            onChange={(e) => setFixedKey(e.target.value)}
+            className="w-full bg-transparent border border-border rounded-xl px-3 py-2.5 text-base outline-none focus:border-primary transition-colors"
+          >
+            {FIXED_FEE_GROUPS.map((g) => (
+              <optgroup key={g} label={g}>
+                {FIXED_FEES.filter((f) => f.group === g).map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.label} ({f.article})
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        {fixed.perUnit && (
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              العدد ({fixed.perUnit})
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={unitCount}
+              onChange={(e) => setUnitCount(parseInt(e.target.value, 10) || 1)}
+              className="w-28 bg-transparent border border-border rounded-xl px-3 py-2.5 text-base outline-none focus:border-primary transition-colors"
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm text-muted">الرسم المستحق</span>
+          <span className="text-2xl font-bold text-primary">
+            {formatYER(total)}{" "}
+            <span className="text-sm font-normal text-muted">ريال</span>
+          </span>
+        </div>
+        {fixed.perUnit && unitCount > 1 && (
+          <p className="text-xs text-muted mt-1">
+            {formatYER(fixed.amount)} × {unitCount} {fixed.perUnit}
+          </p>
+        )}
+        <p className="text-xs text-primary bg-primary/5 border border-primary/15 rounded-lg p-2.5 mt-3 leading-6">
+          💡 يُعفى من الرسوم من يثبت عجزه عن دفعها بقرار من رئيس المحكمة (المادة
+          29).
+        </p>
+        <div className="border-t border-border mt-4 pt-3">
+          <h3 className="text-xs font-bold text-muted mb-1.5">
+            نصّ المادة — {fixed.article}
+          </h3>
+          <p className="legal-text text-sm">{fixed.text}</p>
+        </div>
+        <p className="text-xs text-muted mt-3 leading-6">
+          المصدر: {fixed.article} من قانون الرسوم القضائية رقم (26) لسنة 2013م
+          بصيغتها المعدَّلة بقرار رئيس مجلس القضاء الأعلى رقم (41) لسنة 2025م
+          (عدن). النتيجة استرشادية.
+        </p>
+      </div>
+    </>
   );
 }
 
@@ -660,5 +865,259 @@ function Flag({
     <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${cls}`}>
       {children}
     </span>
+  );
+}
+
+// ————————————————————————————— حاسبة الديات والأروش —————————————————————————————
+
+interface DiyaLine {
+  id: number;
+  injury: DiyaInjury;
+  gender: DiyaGender;
+  intent: DiyaIntent;
+  count: number;
+  subtotal: number;
+}
+
+const GENDER_AR: Record<DiyaGender, string> = { male: "رجل", female: "امرأة" };
+const INTENT_AR: Record<DiyaIntent, string> = {
+  amd: "عمد وشبه العمد",
+  khata: "خطأ",
+};
+
+function DiyaCalculator() {
+  const [gender, setGender] = useState<DiyaGender>("male");
+  const [intent, setIntent] = useState<DiyaIntent>("amd");
+  const [injuryKey, setInjuryKey] = useState<string>(DIYA_INJURIES[0].key);
+  const [count, setCount] = useState(1);
+  const [lines, setLines] = useState<DiyaLine[]>([]);
+  const [nextId, setNextId] = useState(1);
+  const [copied, setCopied] = useState(false);
+
+  const injury =
+    DIYA_INJURIES.find((i) => i.key === injuryKey) ?? DIYA_INJURIES[0];
+  const unit = injury.amounts[gender][intent];
+  const current = unit * Math.max(1, count);
+  const total = useMemo(
+    () => lines.reduce((s, l) => s + l.subtotal, 0),
+    [lines],
+  );
+
+  function addLine() {
+    const c = Math.max(1, count);
+    setLines((prev) => [
+      ...prev,
+      { id: nextId, injury, gender, intent, count: c, subtotal: unit * c },
+    ]);
+    setNextId((n) => n + 1);
+  }
+  function removeLine(id: number) {
+    setLines((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  async function copyResult() {
+    const body = lines
+      .map(
+        (l) =>
+          `• ${l.injury.name} (${GENDER_AR[l.gender]} — ${INTENT_AR[l.intent]})` +
+          `${l.count > 1 ? ` × ${l.count}` : ""} = ${formatYER(l.subtotal)} ريال`,
+      )
+      .join("\n");
+    const text =
+      `حساب الدية/الأرش:\n${body}\n— الإجمالي: ${formatYER(total)} ريال\n` +
+      `(وفق قرار مجلس القضاء الأعلى رقم 51 لسنة 2024م — عبر تطبيق Yemeni Laws)`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* تجاهل */
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* الاختيارات */}
+      <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm space-y-4">
+        {/* الجنس */}
+        <div>
+          <label className="block text-sm font-medium mb-1.5">الجنس</label>
+          <div className="inline-flex rounded-xl border border-border p-1 gap-1">
+            {(["male", "female"] as DiyaGender[]).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGender(g)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  gender === g
+                    ? "bg-primary text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                {GENDER_AR[g]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* نوع الجناية */}
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            نوع الجناية
+          </label>
+          <div className="inline-flex rounded-xl border border-border p-1 gap-1">
+            {(["amd", "khata"] as DiyaIntent[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setIntent(t)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  intent === t
+                    ? "bg-primary text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                {INTENT_AR[t]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* نوع الإصابة + العدد */}
+        <div className="grid sm:grid-cols-[1fr_auto] gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              نوع الإصابة
+            </label>
+            <select
+              value={injuryKey}
+              onChange={(e) => setInjuryKey(e.target.value)}
+              className="w-full bg-transparent border border-border rounded-xl px-3 py-2.5 text-base outline-none focus:border-primary transition-colors"
+            >
+              {DIYA_INJURIES.map((i) => (
+                <option key={i.key} value={i.key}>
+                  {i.name} — {i.fractionLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">العدد</label>
+            <input
+              type="number"
+              min={1}
+              value={count}
+              onChange={(e) => setCount(parseInt(e.target.value, 10) || 1)}
+              className="w-24 bg-transparent border border-border rounded-xl px-3 py-2.5 text-base outline-none focus:border-primary transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* بطاقة تعريف الإصابة المختارة */}
+        <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-sm font-bold text-primary">
+              {injury.name}
+            </span>
+            <span className="text-xs text-muted">{injury.fractionLabel}</span>
+          </div>
+          {injury.fiqh && (
+            <p className="text-xs text-muted leading-6">{injury.fiqh}</p>
+          )}
+          <div className="flex items-baseline justify-between gap-3 pt-1 border-t border-primary/15">
+            <span className="text-xs text-muted">
+              المبلغ ({GENDER_AR[gender]} — {INTENT_AR[intent]}
+              {count > 1 ? ` × ${count}` : ""})
+            </span>
+            <span className="text-lg font-bold text-primary">
+              {formatYER(current)}{" "}
+              <span className="text-xs font-normal text-muted">ريال</span>
+            </span>
+          </div>
+          <button
+            onClick={addLine}
+            className="w-full mt-1 px-3 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            ➕ أضِف إلى الحساب
+          </button>
+        </div>
+      </div>
+
+      {/* سلة الحساب */}
+      {lines.length > 0 && (
+        <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h3 className="text-sm font-bold">الإصابات المضافة</h3>
+            <button
+              onClick={() => setLines([])}
+              className="text-xs text-muted hover:text-red-600"
+            >
+              تفريغ الكل
+            </button>
+          </div>
+          <div className="space-y-2">
+            {lines.map((l) => (
+              <div
+                key={l.id}
+                className="flex items-center justify-between gap-2 text-sm border-b border-border/60 pb-2"
+              >
+                <button
+                  onClick={() => removeLine(l.id)}
+                  title="حذف"
+                  className="text-red-500 hover:text-red-700 text-base leading-none px-1"
+                >
+                  ×
+                </button>
+                <span className="flex-1">
+                  {l.injury.name}
+                  <span className="text-xs text-muted">
+                    {" "}
+                    ({GENDER_AR[l.gender]} — {INTENT_AR[l.intent]}
+                    {l.count > 1 ? ` × ${l.count}` : ""})
+                  </span>
+                </span>
+                <span className="font-medium whitespace-nowrap">
+                  {formatYER(l.subtotal)} ريال
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-baseline justify-between gap-3 mt-4 pt-3 border-t border-border">
+            <span className="text-sm text-muted">الإجمالي</span>
+            <span className="text-2xl font-bold text-primary">
+              {formatYER(total)}{" "}
+              <span className="text-sm font-normal text-muted">ريال</span>
+            </span>
+          </div>
+          <button
+            onClick={copyResult}
+            className="w-full mt-3 px-3 py-2 rounded-lg border border-border text-sm font-medium hover:border-primary hover:text-primary transition-colors"
+          >
+            {copied ? "✓ تم النسخ" : "⧉ نسخ النتيجة مع العزو"}
+          </button>
+        </div>
+      )}
+
+      {/* ملاحظات */}
+      <div className="text-xs text-muted leading-7 bg-surface border border-border rounded-2xl p-4 space-y-2">
+        <p>
+          <span className="font-bold text-foreground">١-</span> دية المرأة على
+          النصف من دية الرجل، وأرشها كأرشه إلى أن يبلغ الأرش ثُلث دية الرجل، وما
+          زاد على الثلث يُنصَّف.
+        </p>
+        <p>
+          <span className="font-bold text-foreground">٢-</span> التشوّهات
+          (العاهات المستديمة) وكل ما زاد عن المعتاد في طول الجناية يكون أرشه
+          «حكومة» يرجع في تقديرها إلى المحكمة.
+        </p>
+        <p>
+          <span className="font-bold text-foreground">٣-</span> تجب الدية كاملة
+          في فقد العضو المفرد أو زوج أو أكثر من جنس واحد، ومنها: {FULL_DIYA_ORGANS}
+        </p>
+        <p className="pt-1 border-t border-border">
+          المصدر: جدول الديات والأروش وفق قرار رئيس مجلس القضاء الأعلى رقم (51)
+          لسنة 2024م (تعديل المادة 40 من قانون الجرائم والعقوبات). النتيجة
+          استرشادية، والمرجع النهائي النصّ الرسمي وتقدير المحكمة.
+        </p>
+      </div>
+    </div>
   );
 }
