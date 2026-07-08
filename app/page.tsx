@@ -614,6 +614,7 @@ function AiSettings({
   apiKey,
   geminiKey,
   nexusUrl,
+  nexusKey,
   userName,
   onSave,
   onClose,
@@ -621,13 +622,15 @@ function AiSettings({
   apiKey: string;
   geminiKey: string;
   nexusUrl: string;
+  nexusKey: string;
   userName: string;
-  onSave: (settings: { apiKey: string; geminiKey: string; nexusUrl: string; userName: string }) => void;
+  onSave: (settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName: string }) => void;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState(apiKey);
   const [geminiDraft, setGeminiDraft] = useState(geminiKey);
   const [nexusDraft, setNexusDraft] = useState(nexusUrl);
+  const [nexusKeyDraft, setNexusKeyDraft] = useState(nexusKey);
   const [nameDraft, setNameDraft] = useState(userName);
   const [show, setShow] = useState(false);
   const valid = draft.trim().startsWith("sk-ant-");
@@ -719,6 +722,20 @@ function AiSettings({
             <p className="text-xs text-muted mt-1.5">
               يلزم عنوان HTTPS لخادم يعمل عليه Nexus وOllama. لا تكتب /chat في النهاية.
             </p>
+            <label className="block text-xs font-bold text-muted mt-3 mb-1.5">
+              مفتاح Nexus (إن كان الخادم محمياً)
+            </label>
+            <input
+              type={show ? "text" : "password"}
+              value={nexusKeyDraft}
+              onChange={(e) => setNexusKeyDraft(e.target.value)}
+              placeholder="X-API-Key (اختياري للخادم المحلي)"
+              dir="ltr"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus:border-primary text-left"
+            />
+            <p className="text-xs text-muted mt-1.5">
+              يُرسَل كترويسة <code dir="ltr">X-API-Key</code>. اتركه فارغاً لخادم محلي بلا مصادقة.
+            </p>
           </div>}
 
           {/* حقل المفتاح */}
@@ -758,7 +775,7 @@ function AiSettings({
           <div className="flex gap-2">
             <button
               onClick={() => {
-                onSave({ apiKey: draft, geminiKey: geminiDraft, nexusUrl: nexusDraft, userName: nameDraft });
+                onSave({ apiKey: draft, geminiKey: geminiDraft, nexusUrl: nexusDraft, nexusKey: nexusKeyDraft, userName: nameDraft });
                 onClose();
               }}
               disabled={!draft.trim() && !geminiDraft.trim() && !nexusDraft.trim()}
@@ -769,10 +786,11 @@ function AiSettings({
             {(apiKey || geminiKey || nexusUrl) && (
               <button
                 onClick={() => {
-                  onSave({ apiKey: "", geminiKey: "", nexusUrl: "", userName: nameDraft });
+                  onSave({ apiKey: "", geminiKey: "", nexusUrl: "", nexusKey: "", userName: nameDraft });
                   setDraft("");
                   setGeminiDraft("");
                   setNexusDraft("");
+                  setNexusKeyDraft("");
                   onClose();
                 }}
                 className="px-4 py-2 rounded-lg border border-red-300 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
@@ -887,6 +905,20 @@ function isUnrecognizedPost2014Law(
 
 function isSanaaPost2014Document(law: Pick<LawMeta, "title">): boolean {
   return law.title.startsWith("🔴 ");
+}
+
+// معرّف جلسة ثابت لكل جهاز — يفعّل ذاكرة Nexus عبر الجلسات (المرحلة 9)
+function getNexusSessionId(): string {
+  try {
+    let id = localStorage.getItem("yl_nexus_session");
+    if (!id) {
+      id = (globalThis.crypto?.randomUUID?.() ?? `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+      localStorage.setItem("yl_nexus_session", id);
+    }
+    return id;
+  } catch {
+    return "default";
+  }
 }
 
 // فصل عنوان المادة عن مسار القسم (المحفوظ بعد « — » أثناء الفهرسة)
@@ -1598,6 +1630,7 @@ export default function Home() {
   const [geminiKey, setGeminiKey] = useState("");
   const [userName, setUserName] = useState("");
   const [nexusUrl, setNexusUrl] = useState("");
+  const [nexusKey, setNexusKey] = useState("");
   const [nexusHistory, setNexusHistory] = useState<NexusMessage[]>([]);
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
@@ -1621,6 +1654,8 @@ export default function Home() {
       if (saved) setApiKey(saved);
       const savedNexus = localStorage.getItem("yl_nexus_url");
       if (savedNexus) setNexusUrl(savedNexus);
+      const savedNexusKey = localStorage.getItem("yl_nexus_key");
+      if (savedNexusKey) setNexusKey(savedNexusKey);
       const savedGemini = localStorage.getItem("yl_gemini_key");
       if (savedGemini) setGeminiKey(savedGemini);
       const savedName = localStorage.getItem("yl_user_name");
@@ -1658,14 +1693,16 @@ export default function Home() {
     }
   }, [nexusHistory]);
 
-  function saveAiSettings(settings: { apiKey: string; geminiKey: string; nexusUrl: string; userName?: string }) {
+  function saveAiSettings(settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName?: string }) {
     const key = settings.apiKey.trim();
     const googleKey = settings.geminiKey.trim();
     const url = settings.nexusUrl.trim().replace(/\/+$/, "");
+    const nKey = settings.nexusKey.trim();
     const name = (settings.userName ?? "").trim();
     setApiKey(key);
     setGeminiKey(googleKey);
     setNexusUrl(url);
+    setNexusKey(nKey);
     setUserName(name);
     setNexusHistory([]);
     setAiMeta(null);
@@ -1674,6 +1711,8 @@ export default function Home() {
       else localStorage.removeItem("yl_claude_key");
       if (url) localStorage.setItem("yl_nexus_url", url);
       else localStorage.removeItem("yl_nexus_url");
+      if (nKey) localStorage.setItem("yl_nexus_key", nKey);
+      else localStorage.removeItem("yl_nexus_key");
       if (googleKey) localStorage.setItem("yl_gemini_key", googleKey);
       else localStorage.removeItem("yl_gemini_key");
       if (name) localStorage.setItem("yl_user_name", name);
@@ -1888,7 +1927,10 @@ export default function Home() {
             replyText = reply.content;
             model = reply.model;
           } else if (nexusUrl.trim()) {
-            const reply = await nexusChat(nexusUrl, [...nexusHistory, userMsg]);
+            const reply = await nexusChat(nexusUrl, [...nexusHistory, userMsg], {
+              apiKey: nexusKey.trim() || undefined,
+              sessionId: getNexusSessionId(),
+            });
             replyText = reply.content;
             model = reply.model;
           } else if (apiKey.trim()) {
@@ -2345,6 +2387,7 @@ export default function Home() {
           apiKey={apiKey}
           geminiKey={geminiKey}
           nexusUrl={nexusUrl}
+          nexusKey={nexusKey}
           userName={userName}
           onSave={saveAiSettings}
           onClose={() => setShowAi(false)}
