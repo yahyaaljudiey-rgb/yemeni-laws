@@ -70,6 +70,7 @@ function DocTypeBadge({ category }: { category: string | null }) {
   if (!category || category === "قانون") return null;
   const styles: Record<string, string> = {
     لائحة: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+    اتفاقية: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
     حكم: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
     دستور: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
     نيابة: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
@@ -91,6 +92,7 @@ function displayLawTitle(title: string | null, category: string | null): string 
   // نُزيل علامات الاتجاه والمسافات الخفية من البداية، ونبقي النص كما هو للعرض
   const t = (title ?? "").replace(/[‎‏‪-‮؜]/g, "").trim();
   if (!t) return t;
+  if (t.startsWith("🔴 ")) return `🔴 ${displayLawTitle(t.slice(3), category)}`;
   // نسخة للفحص فقط: بلا تطويل (ـ) لضمان مطابقة البادئة
   const norm = t.replace(/ـ/g, "");
   if (category === "قانون") {
@@ -846,6 +848,7 @@ interface LawMeta {
 const BROWSE_WINDOWS: { key: string; label: string; cats: string[] }[] = [
   { key: "قانون", label: "القوانين", cats: ["دستور", "قانون"] },
   { key: "لائحة", label: "اللوائح", cats: ["لائحة"] },
+  { key: "اتفاقية", label: "الاتفاقيات والمواثيق", cats: ["اتفاقية"] },
   { key: "حكم", label: "الأحكام والقواعد القضائية", cats: ["حكم"] },
   { key: "نيابة", label: "تعليمات النيابة", cats: ["نيابة"] },
 ];
@@ -880,6 +883,10 @@ function isUnrecognizedPost2014Law(
   if (!match) return false;
   const year = Number(match[0]);
   return year >= 1900 ? year > 2014 : year > 1435;
+}
+
+function isSanaaPost2014Document(law: Pick<LawMeta, "title">): boolean {
+  return law.title.startsWith("🔴 ");
 }
 
 // فصل عنوان المادة عن مسار القسم (المحفوظ بعد « — » أثناء الفهرسة)
@@ -1230,7 +1237,7 @@ function LawLibrary({
         </button>
         <div
           className={"bg-surface border rounded-2xl p-5 shadow-sm mb-4 " +
-            (isUnrecognizedPost2014Law(selected)
+            (isUnrecognizedPost2014Law(selected) || isSanaaPost2014Document(selected)
               ? "border-red-400 dark:border-red-800"
               : "border-border")}
         >
@@ -1242,6 +1249,11 @@ function LawLibrary({
             {isUnrecognizedPost2014Law(selected) && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
                 ⚠ قانون جديد بعد 2014 — غير معترف به
+              </span>
+            )}
+            {isSanaaPost2014Document(selected) && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
+                صادر من صنعاء بعد 2014
               </span>
             )}
           </div>
@@ -1451,7 +1463,7 @@ function LawLibrary({
             key={l.id}
             onClick={() => openLaw(l)}
             className={"text-right bg-surface border rounded-xl p-4 shadow-sm transition-colors " +
-              (isUnrecognizedPost2014Law(l)
+              (isUnrecognizedPost2014Law(l) || isSanaaPost2014Document(l)
                 ? "border-red-400 hover:border-red-600 dark:border-red-800"
                 : "border-border hover:border-primary")}
           >
@@ -1464,6 +1476,11 @@ function LawLibrary({
             {isUnrecognizedPost2014Law(l) && (
               <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
                 ⚠ قانون جديد بعد 2014 — غير معترف به
+              </span>
+            )}
+            {isSanaaPost2014Document(l) && (
+              <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
+                صادر من صنعاء بعد 2014
               </span>
             )}
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -1503,6 +1520,7 @@ function HomeScreen({
   }[] = [
     { icon: "📗", title: "القوانين", sub: "الدستور والقوانين", onClick: () => onOpenWindow("قانون") },
     { icon: "📘", title: "اللوائح", sub: "اللوائح التنظيمية", onClick: () => onOpenWindow("لائحة") },
+    { icon: "🤝", title: "الاتفاقيات", sub: "الاتفاقيات والمواثيق", onClick: () => onOpenWindow("اتفاقية") },
     { icon: "⚖️", title: "الأحكام والقواعد القضائية", sub: "أحكام ومبادئ", onClick: () => onOpenWindow("حكم") },
     { icon: "🏛️", title: "تعليمات النيابة", sub: "تعليمات وتعاميم", onClick: () => onOpenWindow("نيابة") },
   ];
