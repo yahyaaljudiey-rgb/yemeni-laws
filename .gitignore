@@ -29,6 +29,9 @@
 # مصادر خام للفهرسة (HTML/تحليلات) — محلية فقط، تُدرَج في قاعدة البيانات ولا تُرفَع
 /imports
 
+# مجموعة Nexus المُصدَّرة (تُولَّد من laws.db عبر scripts/nexus-export.mjs)
+/nexus-corpus
+
 # بيئة بايثون وجلسة تلجرام (تحتوي بيانات دخول حساسة)
 /scripts/.venv
 /scripts/*.session
