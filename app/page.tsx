@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, useRef, Fragment } from "react";
 import Link from "next/link";
 import SiteFooter from "./site-footer";
 import AppBottomNav from "./app-bottom-nav";
@@ -1677,6 +1677,7 @@ export default function Home() {
   const [thinking, setThinking] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [nexusCitations, setNexusCitations] = useState<NexusCitation[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
   const [community, setCommunity] = useState<CommunityItem[]>([]);
@@ -1738,6 +1739,13 @@ export default function Home() {
       /* تجاهل */
     }
   }, [nexusHistory]);
+
+  // تمرير تلقائي لأحدث رسالة أثناء الدردشة والبثّ
+  useEffect(() => {
+    if (mode === "ask") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [nexusHistory, streamText, thinking, mode]);
 
   function saveAiSettings(settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName?: string }) {
     const key = settings.apiKey.trim();
@@ -2208,38 +2216,43 @@ export default function Home() {
                 🗑 مسح المحادثة
               </button>
             </div>
-            <div className="flex flex-col gap-3">
-              {nexusHistory.map((m, i) => (
-                <div
-                  key={i}
-                  className={`max-w-[88%] rounded-2xl px-4 py-2.5 shadow-sm ${
-                    m.role === "user"
-                      ? "self-start bg-primary text-white"
-                      : "self-end bg-surface border border-border"
-                  }`}
-                >
-                  {m.role === "assistant" ? (
-                    <RichAnswer text={m.content} />
-                  ) : (
-                    <div className="legal-text text-[1.02rem] whitespace-pre-wrap">
+            <div className="yl-chat">
+              {nexusHistory.map((m, i) =>
+                m.role === "user" ? (
+                  <div key={i} className="yl-row yl-row-user">
+                    <div className="yl-msg-bubble yl-msg-user whitespace-pre-wrap">
                       {m.content}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ) : (
+                  <div key={i} className="yl-row yl-row-ai">
+                    <div className="yl-msg-bubble yl-msg-ai">
+                      <RichAnswer text={m.content} />
+                    </div>
+                    <div className="yl-avatar">⚖️</div>
+                  </div>
+                ),
+              )}
               {thinking && (
-                <div className="self-end bg-surface border border-border rounded-2xl px-4 py-3 shadow-sm">
-                  <span className="yl-think"><span></span><span></span><span></span></span>
+                <div className="yl-row yl-row-ai">
+                  <div className="yl-msg-bubble yl-msg-ai py-3">
+                    <span className="yl-think">
+                      <span></span><span></span><span></span>
+                    </span>
+                  </div>
+                  <div className="yl-avatar">⚖️</div>
                 </div>
               )}
               {!thinking && streamText && (
-                <div className="self-end bg-surface border border-border rounded-2xl px-4 py-2.5 shadow-sm max-w-[88%]">
-                  <div className="relative">
+                <div className="yl-row yl-row-ai">
+                  <div className="yl-msg-bubble yl-msg-ai">
                     <RichAnswer text={streamText} />
                     <span className="yl-caret" />
                   </div>
+                  <div className="yl-avatar">⚖️</div>
                 </div>
               )}
+              <div ref={chatEndRef} />
             </div>
             {sources.length > 0 && (
               <div className="mt-3">
