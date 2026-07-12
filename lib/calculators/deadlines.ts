@@ -13,6 +13,7 @@ export interface DeadlineRule {
   startBasis: StartBasis;
   startLabel: string; // وصف نقطة البدء
   note?: string;
+  urgent?: boolean; // قضية مستعجلة تُنظر خلال العطلة القضائية (رمضان لا يوقفها)
 }
 
 export const DEADLINE_RULES: DeadlineRule[] = [
@@ -32,6 +33,7 @@ export const DEADLINE_RULES: DeadlineRule[] = [
     basisArticle: "المادة (244)",
     startBasis: "judgment",
     startLabel: "من تاريخ النطق بالحكم",
+    urgent: true,
   },
   {
     key: "execution_dispute",
@@ -146,8 +148,10 @@ function toHijri(d: Date): { m: number; d: number } {
 }
 
 // اسم العطلة إن كان اليوم عطلة (نهاية أسبوع/رسمية/عيد/عطلة قضائية رمضان)، وإلا null.
+// urgent = قضية مستعجلة: تُنظر خلال العطلة القضائية (م.73) فلا يوقفها رمضان،
+// لكنها تظل تتأثّر بالجمعة/السبت والعطل الرسمية والأعياد.
 // ملاحظة: العطل الهجرية تقريبية (أم القرى) وقد تختلف يوماً بحسب الرؤية.
-export function holidayName(d: Date): string | null {
+export function holidayName(d: Date, urgent = false): string | null {
   const g = d.getDay();
   if (g === 5) return "الجمعة";
   if (g === 6) return "السبت";
@@ -156,20 +160,24 @@ export function holidayName(d: Date): string | null {
   );
   if (fixed) return fixed.name;
   const h = toHijri(d);
-  if (h.m === 9) return "العطلة القضائية (رمضان)"; // رمضان أحد شهرَي العطلة القضائية (م.73)
   if (h.m === 10 && h.d <= 3) return "عيد الفطر";
   if (h.m === 12 && h.d >= 9 && h.d <= 13) return "عيد الأضحى";
   if (h.m === 1 && h.d === 1) return "رأس السنة الهجرية";
+  // رمضان أحد شهرَي العطلة القضائية (م.73) — لا يوقف مواعيد القضايا المستعجلة
+  if (h.m === 9 && !urgent) return "العطلة القضائية (رمضان)";
   return null;
 }
 
 // يمدّ التاريخ إلى أول يوم عمل تالٍ إن صادف عطلة (م.111: العطلات توقف المواعيد)
-function nextWorkingDay(d: Date): { date: Date; skipped: SkippedHoliday[] } {
+function nextWorkingDay(
+  d: Date,
+  urgent: boolean,
+): { date: Date; skipped: SkippedHoliday[] } {
   const skipped: SkippedHoliday[] = [];
   let r = new Date(d.getTime());
   let name: string | null;
   let guard = 0;
-  while ((name = holidayName(r)) !== null && guard < 45) {
+  while ((name = holidayName(r, urgent)) !== null && guard < 45) {
     if (!skipped.some((s) => s.name === name)) {
       skipped.push({ date: new Date(r.getTime()), name });
     }
@@ -190,11 +198,12 @@ export function computeDeadline(
   rule: DeadlineRule,
   startDate: Date,
   today: Date = new Date(),
+  urgent = false,
 ): DeadlineResult {
   // آخر يوم تقويمي = تاريخ البدء + المدة
   const rawDeadline = addDays(startDate, rule.days);
   // إن صادف اليوم الأخير عطلة (جمعة/سبت/رسمية/عيد/عطلة قضائية) يُمدّ لأول يوم عمل
-  const { date: deadline, skipped } = nextWorkingDay(rawDeadline);
+  const { date: deadline, skipped } = nextWorkingDay(rawDeadline, urgent);
   const daysRemaining = diffDays(deadline, today);
   return {
     rule,

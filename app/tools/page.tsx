@@ -468,12 +468,16 @@ function DeadlinesCalculator() {
   const rule: DeadlineRule =
     DEADLINE_RULES.find((r) => r.key === ruleKey) ?? DEADLINE_RULES[0];
 
+  const [manualUrgent, setManualUrgent] = useState(false);
+  // قضية مستعجلة: بعض الأنواع مستعجلة بطبيعتها (rule.urgent)، وإلا يحدّدها المستخدم
+  const urgent = manualUrgent || !!rule.urgent;
+
   const result = useMemo(() => {
     if (!dateStr) return null;
     const start = new Date(dateStr + "T00:00:00");
     if (isNaN(start.getTime())) return null;
-    return computeDeadline(rule, start);
-  }, [rule, dateStr]);
+    return computeDeadline(rule, start, new Date(), urgent);
+  }, [rule, dateStr, urgent]);
 
   return (
     <div className="space-y-5">
@@ -515,6 +519,24 @@ function DeadlinesCalculator() {
             className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-base outline-none focus:border-primary transition-colors"
           />
         </div>
+
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={urgent}
+            disabled={!!rule.urgent}
+            onChange={(e) => setManualUrgent(e.target.checked)}
+            className="mt-0.5 w-4 h-4 accent-primary disabled:opacity-60"
+          />
+          <span className="text-sm leading-6">
+            قضية مستعجلة
+            <span className="text-xs text-muted block">
+              تُنظر خلال العطلة القضائية (م.73 سلطة قضائية)، فلا يوقف رمضان
+              ميعادها — لكنها تظلّ تتأثّر بالجمعة/السبت والعطل الرسمية والأعياد.
+              {rule.urgent ? " (هذا النوع مستعجل بطبيعته)" : ""}
+            </span>
+          </span>
+        </label>
       </div>
 
       {result && (
