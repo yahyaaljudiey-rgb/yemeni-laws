@@ -19,10 +19,17 @@ import {
 } from "@/lib/client-search";
 import { clientAsk } from "@/lib/client-ask";
 import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/client-assistant";
-import { nexusChat, type NexusMessage } from "@/lib/nexus-client";
+import { nexusChat, nexusChatStream, type NexusMessage, type NexusCitation } from "@/lib/nexus-client";
 import { geminiChat, geminiExpandQuery } from "@/lib/gemini-client";
 
 const GEMINI_ONLY_BUILD = process.env.NEXT_PUBLIC_GEMINI_ONLY === "1";
+
+// اتصال نواة Nexus الافتراضي — يعمل الشات فوراً للزملاء بلا إعدادات (قابل للتغيير في الإعدادات)
+const DEFAULT_NEXUS_URL =
+  process.env.NEXT_PUBLIC_NEXUS_URL || "https://145-241-239-165.sslip.io";
+const DEFAULT_NEXUS_KEY =
+  process.env.NEXT_PUBLIC_NEXUS_KEY ||
+  "200022c89170ed9e6a28de08f6ce8b0b173c1537926b70a1";
 
 // خادم التغذية الراجعة المشتركة (يجمع الأسئلة بلا هوية ويعرض «يسأل الناس»)
 const FEEDBACK_URL =
@@ -1664,11 +1671,12 @@ export default function Home() {
   const [apiKey, setApiKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
   const [userName, setUserName] = useState("");
-  const [nexusUrl, setNexusUrl] = useState("");
-  const [nexusKey, setNexusKey] = useState("");
+  const [nexusUrl, setNexusUrl] = useState(DEFAULT_NEXUS_URL);
+  const [nexusKey, setNexusKey] = useState(DEFAULT_NEXUS_KEY);
   const [nexusHistory, setNexusHistory] = useState<NexusMessage[]>([]);
   const [thinking, setThinking] = useState(false);
   const [streamText, setStreamText] = useState("");
+  const [nexusCitations, setNexusCitations] = useState<NexusCitation[]>([]);
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
   const [community, setCommunity] = useState<CommunityItem[]>([]);
@@ -1689,10 +1697,11 @@ export default function Home() {
     try {
       const saved = localStorage.getItem("yl_claude_key");
       if (saved) setApiKey(saved);
+      // نستخدم !== null ليبقى الافتراضي للمستخدم الجديد، ويُحترم اختيار من غيّره (حتى الإفراغ)
       const savedNexus = localStorage.getItem("yl_nexus_url");
-      if (savedNexus) setNexusUrl(savedNexus);
+      if (savedNexus !== null) setNexusUrl(savedNexus);
       const savedNexusKey = localStorage.getItem("yl_nexus_key");
-      if (savedNexusKey) setNexusKey(savedNexusKey);
+      if (savedNexusKey !== null) setNexusKey(savedNexusKey);
       const savedGemini = localStorage.getItem("yl_gemini_key");
       if (savedGemini) setGeminiKey(savedGemini);
       const savedName = localStorage.getItem("yl_user_name");
@@ -1871,10 +1880,12 @@ export default function Home() {
     }
   }
 
-  async function run(override?: string) {
+  async function run(override?: string, forceMode?: Mode) {
     const q = (typeof override === "string" ? override : query).trim();
     if (!q) return;
     if (typeof override === "string") setQuery(override);
+    if (forceMode) setMode(forceMode);
+    const activeMode = forceMode ?? mode;
     setLoading(true);
     setError(null);
     setHits(null);
@@ -1884,7 +1895,7 @@ export default function Home() {
     setAiMeta(null);
 
     try {
-      if (mode === "search") {
+      if (activeMode === "search") {
         // الوضع المحلي (offline) إن توفّرت الحزمة، وإلا الخادم
         if (await offlineReady()) {
           const result =
@@ -1958,11 +1969,13 @@ export default function Home() {
         const history = nexusHistory;
         setNexusHistory([...history, userMsg]);
         setStreamText("");
+        setNexusCitations([]);
         setThinking(true);
         setQuery("");
 
         let replyText = offlineText;
         let model = "";
+        let streamedLive = false;
         try {
           if (geminiKey.trim()) {
             const reply = await geminiChat(
@@ -1971,12 +1984,22 @@ export default function Home() {
             replyText = reply.content;
             model = reply.model;
           } else if (nexusUrl.trim()) {
-            const reply = await nexusChat(nexusUrl, [...history, userMsg], {
-              apiKey: nexusKey.trim() || undefined,
-              sessionId: getNexusSessionId(),
-            });
+            // بثّ حقيقي: تظهر الكلمات فور توليدها من الخادم
+            let acc = "";
+            const reply = await nexusChatStream(
+              nexusUrl,
+              [...history, userMsg],
+              (delta) => {
+                acc += delta;
+                setThinking(false);
+                setStreamText(acc);
+              },
+              { apiKey: nexusKey.trim() || undefined, sessionId: getNexusSessionId() },
+            );
             replyText = reply.content;
             model = reply.model;
+            setNexusCitations(reply.citations);
+            streamedLive = true;
           } else if (apiKey.trim()) {
             const data = await clientAsk(q, apiKey.trim());
             replyText = data.answer;
@@ -1986,11 +2009,12 @@ export default function Home() {
           replyText =
             offlineText +
             `\n\n(تعذّر الاتصال بنموذج الذكاء: ${aiErr instanceof Error ? aiErr.message : "خطأ"} — هذه النتيجة المحلية.)`;
+          streamedLive = false;
         }
         setAiMeta(model || null);
-        // كتابة تدريجية للجواب ثم تثبيته في سجلّ المحادثة
+        // كتابة تدريجية (إلا إن ظهر حيّاً بالبثّ) ثم تثبيته في السجلّ
         setThinking(false);
-        await typewriter(replyText, setStreamText);
+        if (!streamedLive) await typewriter(replyText, setStreamText);
         setNexusHistory([...history, userMsg, { role: "assistant", content: replyText }]);
         setStreamText("");
         if (!communityOptOut) logCommunityQuestion(q, replyText);
@@ -2234,6 +2258,31 @@ export default function Home() {
                       {s.article_number ? ` — مادة (${s.article_number})` : ""}
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+            {nexusCitations.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs text-muted mb-1.5">
+                  📎 المصادر (اضغط للبحث في القانون):
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(
+                    new Set(
+                      nexusCitations.map((c) => c.source.split(" - ")[0].trim()),
+                    ),
+                  )
+                    .filter(Boolean)
+                    .map((law) => (
+                      <button
+                        key={law}
+                        onClick={() => run(law, "search")}
+                        title="ابحث في هذا القانون"
+                        className="text-xs px-3 py-1.5 rounded-full bg-accent/10 border border-accent/40 text-accent hover:bg-accent hover:text-white transition-colors"
+                      >
+                        {law.length > 44 ? law.slice(0, 44) + "…" : law}
+                      </button>
+                    ))}
                 </div>
               </div>
             )}

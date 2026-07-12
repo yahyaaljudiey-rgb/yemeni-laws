@@ -21,6 +21,12 @@ touch out/.nojekyll   # ضروري ليخدم GitHub مجلّد _next/
 # السحاب يرتدّ تلقائياً للبحث اللفظي إن غابا.
 rm -rf out/models out/ort
 
+# كاش ذكي: اسم كاش البيانات = بصمة meta.json (يتغيّر عند إعادة تصدير البيانات فقط)
+# فيتحدّث كاش المستخدمين تلقائياً عند تغيّر البيانات، دون تصفير في النشرات الأخرى.
+DATA_HASH="$(md5sum public/data/meta.json | cut -c1-10)"
+sed -i "s/\(const CACHE = \"\)yemeni-laws-[0-9A-Za-z_]*\(\"\)/\1yemeni-laws-d${DATA_HASH}\2/" out/sw.js
+echo "» بصمة كاش البيانات: d${DATA_HASH}"
+
 echo "» دفع out/ إلى فرع gh-pages ..."
 TOKEN="$(gh auth token)"
 cd out

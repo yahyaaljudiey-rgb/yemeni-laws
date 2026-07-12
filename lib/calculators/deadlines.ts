@@ -42,6 +42,7 @@ export const DEADLINE_RULES: DeadlineRule[] = [
     basisArticle: "المادة (501)",
     startBasis: "judgment",
     startLabel: "من تاريخ صدور الحكم في المنازعة",
+    urgent: true,
   },
   {
     key: "interlocutory",
@@ -82,6 +83,7 @@ export const DEADLINE_RULES: DeadlineRule[] = [
     basisArticle: "المادة (262)",
     startBasis: "notification",
     startLabel: "من تاريخ الإعلان بالأمر",
+    urgent: true,
   },
   {
     key: "debtor_objection",
@@ -90,6 +92,7 @@ export const DEADLINE_RULES: DeadlineRule[] = [
     basisArticle: "المادة (268)",
     startBasis: "notification",
     startLabel: "من تاريخ الإعلان به",
+    urgent: true,
   },
   {
     key: "settlement_objection",
