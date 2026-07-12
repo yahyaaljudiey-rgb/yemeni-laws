@@ -1995,30 +1995,39 @@ export default function Home() {
         let replyText = offlineText;
         let model = "";
         let streamedLive = false;
+        // بثّ من النواة (يُستخدم مباشرةً أو كارتداد إن فشل Gemini)
+        const streamFromNexus = async () => {
+          let acc = "";
+          const reply = await nexusChatStream(
+            nexusUrl,
+            [...history, userMsg],
+            (delta) => {
+              acc += delta;
+              setThinking(false);
+              setStreamText(acc);
+            },
+            { apiKey: nexusKey.trim() || undefined, sessionId: getNexusSessionId() },
+          );
+          replyText = reply.content;
+          model = reply.model;
+          setNexusCitations(reply.citations);
+          streamedLive = true;
+        };
         try {
           if (geminiKey.trim()) {
-            const reply = await geminiChat(
-              geminiKey, [...history, userMsg], hits, calculatorContext, appKnowledge(), userName,
-            );
-            replyText = reply.content;
-            model = reply.model;
+            try {
+              const reply = await geminiChat(
+                geminiKey, [...history, userMsg], hits, calculatorContext, appKnowledge(), userName,
+              );
+              replyText = reply.content;
+              model = reply.model;
+            } catch (gErr) {
+              // فشل Gemini (مثل نفاد الحصة) → ارتدّ للنواة إن توفّرت
+              if (nexusUrl.trim()) await streamFromNexus();
+              else throw gErr;
+            }
           } else if (nexusUrl.trim()) {
-            // بثّ حقيقي: تظهر الكلمات فور توليدها من الخادم
-            let acc = "";
-            const reply = await nexusChatStream(
-              nexusUrl,
-              [...history, userMsg],
-              (delta) => {
-                acc += delta;
-                setThinking(false);
-                setStreamText(acc);
-              },
-              { apiKey: nexusKey.trim() || undefined, sessionId: getNexusSessionId() },
-            );
-            replyText = reply.content;
-            model = reply.model;
-            setNexusCitations(reply.citations);
-            streamedLive = true;
+            await streamFromNexus();
           } else if (apiKey.trim()) {
             const data = await clientAsk(q, apiKey.trim());
             replyText = data.answer;
