@@ -907,6 +907,63 @@ function isSanaaPost2014Document(law: Pick<LawMeta, "title">): boolean {
   return law.title.startsWith("🔴 ");
 }
 
+// تنسيق نصّي خفيف داخل السطر: **غليظ** و[عزو] بلون مختلف
+function renderInline(text: string, kp: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  const re = /\*\*(.+?)\*\*|\[(\d+(?:\s*[,،]\s*\d+)*)\]/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let k = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m[1] !== undefined) {
+      out.push(<strong key={`${kp}-${k}`}>{m[1]}</strong>);
+    } else if (m[2] !== undefined) {
+      out.push(<sup key={`${kp}-${k}`} className="yl-cite">[{m[2]}]</sup>);
+    }
+    last = re.lastIndex;
+    k++;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+// عارض جواب المستشار: يحوّل Markdown الخفيف (غليظ/تنقيط/عزو) إلى تنسيق فعلي
+function RichAnswer({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <div className="yl-ans legal-text text-[1.02rem]">
+      {lines.map((line, i) => {
+        const isBullet = /^\s*[*-]\s+/.test(line);
+        const clean = line.replace(/^\s*[*-]\s+/, "");
+        if (!clean.trim()) return <div key={i} style={{ height: "0.4rem" }} />;
+        if (isBullet) {
+          return (
+            <div key={i} className="yl-ans-bullet">
+              <span>•</span>
+              <span>{renderInline(clean, `l${i}`)}</span>
+            </div>
+          );
+        }
+        return <p key={i}>{renderInline(clean, `l${i}`)}</p>;
+      })}
+    </div>
+  );
+}
+
+// كتابة تدريجية (تأثير «يكتب الآن») — تكشف النص كلمةً كلمة بسرعة متكيّفة مع الطول
+async function typewriter(full: string, onChunk: (s: string) => void): Promise<void> {
+  const parts = full.split(/(\s+)/);
+  // نُبقي الزمن الكلّي معقولاً (~1.6ث) مهما طال الجواب
+  const delay = Math.max(6, Math.min(40, Math.round(1600 / Math.max(parts.length, 1))));
+  let acc = "";
+  for (const p of parts) {
+    acc += p;
+    onChunk(acc);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+}
+
 // معرّف جلسة ثابت لكل جهاز — يفعّل ذاكرة Nexus عبر الجلسات (المرحلة 9)
 function getNexusSessionId(): string {
   try {
@@ -1632,6 +1689,8 @@ export default function Home() {
   const [nexusUrl, setNexusUrl] = useState("");
   const [nexusKey, setNexusKey] = useState("");
   const [nexusHistory, setNexusHistory] = useState<NexusMessage[]>([]);
+  const [thinking, setThinking] = useState(false);
+  const [streamText, setStreamText] = useState("");
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
   const [community, setCommunity] = useState<CommunityItem[]>([]);
@@ -1917,17 +1976,24 @@ export default function Home() {
             : [a.title, ...a.lines, a.citation ? `المصدر: ${a.citation}` : ""]
                 .filter(Boolean)
                 .join("\n");
+        // نعرض رسالة المستخدم فوراً ونُظهر مؤشّر «يفكّر» — تجربة شات حقيقية
+        const history = nexusHistory;
+        setNexusHistory([...history, userMsg]);
+        setStreamText("");
+        setThinking(true);
+        setQuery("");
+
         let replyText = offlineText;
         let model = "";
         try {
           if (geminiKey.trim()) {
             const reply = await geminiChat(
-              geminiKey, [...nexusHistory, userMsg], hits, calculatorContext, appKnowledge(), userName,
+              geminiKey, [...history, userMsg], hits, calculatorContext, appKnowledge(), userName,
             );
             replyText = reply.content;
             model = reply.model;
           } else if (nexusUrl.trim()) {
-            const reply = await nexusChat(nexusUrl, [...nexusHistory, userMsg], {
+            const reply = await nexusChat(nexusUrl, [...history, userMsg], {
               apiKey: nexusKey.trim() || undefined,
               sessionId: getNexusSessionId(),
             });
@@ -1944,9 +2010,12 @@ export default function Home() {
             `\n\n(تعذّر الاتصال بنموذج الذكاء: ${aiErr instanceof Error ? aiErr.message : "خطأ"} — هذه النتيجة المحلية.)`;
         }
         setAiMeta(model || null);
-        setNexusHistory([...nexusHistory, userMsg, { role: "assistant", content: replyText }]);
+        // كتابة تدريجية للجواب ثم تثبيته في سجلّ المحادثة
+        setThinking(false);
+        await typewriter(replyText, setStreamText);
+        setNexusHistory([...history, userMsg, { role: "assistant", content: replyText }]);
+        setStreamText("");
         if (!communityOptOut) logCommunityQuestion(q, replyText);
-        setQuery("");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "حدث خطأ غير متوقع");
@@ -2147,11 +2216,28 @@ export default function Home() {
                       : "self-end bg-surface border border-border"
                   }`}
                 >
-                  <div className="legal-text text-[1.02rem] whitespace-pre-wrap">
-                    {m.content}
-                  </div>
+                  {m.role === "assistant" ? (
+                    <RichAnswer text={m.content} />
+                  ) : (
+                    <div className="legal-text text-[1.02rem] whitespace-pre-wrap">
+                      {m.content}
+                    </div>
+                  )}
                 </div>
               ))}
+              {thinking && (
+                <div className="self-end bg-surface border border-border rounded-2xl px-4 py-3 shadow-sm">
+                  <span className="yl-think"><span></span><span></span><span></span></span>
+                </div>
+              )}
+              {!thinking && streamText && (
+                <div className="self-end bg-surface border border-border rounded-2xl px-4 py-2.5 shadow-sm max-w-[88%]">
+                  <div className="relative">
+                    <RichAnswer text={streamText} />
+                    <span className="yl-caret" />
+                  </div>
+                </div>
+              )}
             </div>
             {sources.length > 0 && (
               <div className="mt-3">
