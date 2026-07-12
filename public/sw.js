@@ -1,6 +1,6 @@
 // Service Worker لتطبيق Yemeni Laws
 // قابلية التثبيت + عمل دون إنترنت: قشرة التطبيق + حزمة البيانات الثابتة.
-const CACHE = "yemeni-laws-v25";
+const CACHE = "yemeni-laws-v26";
 // مسار القاعدة: يُشتقّ من موقع ملفّ الـSW نفسه ليعمل على الجذر أو على مسار فرعي
 // (مثل GitHub Pages: user.github.io/yemeni-laws/sw.js → BASE = "/yemeni-laws").
 const BASE = self.location.pathname.replace(/\/sw\.js$/, "");
@@ -34,9 +34,23 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith(`${BASE}/api/`)) return; // طلبات API للشبكة مباشرة
 
-  // حزمة البيانات الثابتة: «الكاش أولاً» — تُحمَّل مرّة وتعمل دون إنترنت بعدها
-  // (نتفادى إعادة تنزيل أجزاء المتجهات الكبيرة في كل زيارة).
   if (url.pathname.startsWith(`${BASE}/data/`)) {
+    // الملفات الصغيرة (قائمة القوانين + الميتا): «الشبكة أولاً» — يظهر أي قانون
+    // جديد فوراً عند وجود إنترنت، مع الارتداد للكاش دون إنترنت.
+    if (/\/data\/(laws|meta)\.json$/.test(url.pathname)) {
+      event.respondWith(
+        fetch(request)
+          .then((res) => {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+            return res;
+          })
+          .catch(() => caches.match(request)),
+      );
+      return;
+    }
+    // الملفات الضخمة (المواد + المتجهات): «الكاش أولاً» لتفادي إعادة تنزيل ضخم
+    // في كل زيارة (تُحدَّث عند رفع رقم نسخة الكاش CACHE).
     event.respondWith(
       caches.match(request).then(
         (cached) =>
