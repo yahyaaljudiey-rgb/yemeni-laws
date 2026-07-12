@@ -214,8 +214,8 @@ function Post2014Notice({
   return (
     <div className="mt-3 text-xs bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg p-2.5">
       <p className="text-red-700 dark:text-red-300 leading-6">
-        ⚠ عُدّلت هذه المادة بعد 2014{amendYear ? ` (سنة ${amendYear})` : ""}،
-        والتعديل غير معترف به. النصّ أعلاه هو الصيغة المعتمدة قبل 2014.
+        ⚠ عُدّلت هذه المادة بعد 2014{amendYear ? ` (سنة ${amendYear})` : ""}.
+        النصّ أعلاه هو الصيغة المعتمدة قبل 2014.
       </p>
       <button
         onClick={() => setShow((s) => !s)}
@@ -382,7 +382,7 @@ function AmendmentPanel({
                         </span>
                         {t.unrecognized && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-600 text-white">
-                            غير معترف به
+                            بعد 2014
                           </span>
                         )}
                       </div>
@@ -418,7 +418,7 @@ function AmendmentPanel({
                         </span>
                         {unrec ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-600 text-white">
-                            ⚠ معدّلة بعد 2014 — غير معترف بها
+                            ⚠ معدّلة بعد 2014
                           </span>
                         ) : (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
@@ -891,18 +891,6 @@ function lawPriority(l: LawMeta): number {
   return idx === -1 ? Infinity : idx + 1;
 }
 
-// أي قانون جديد بعد 2014 يأخذ التحذير تلقائياً عند إدخاله في المكتبة.
-// ندعم السنوات الميلادية والهجرية، ولا نطبّق القاعدة على اللوائح أو أنواع الوثائق الأخرى.
-function isUnrecognizedPost2014Law(
-  law: Pick<LawMeta, "year" | "category">,
-): boolean {
-  if (law.category !== "قانون" || !law.year) return false;
-  const match = toLatinDigits(law.year).match(/\d{4}/);
-  if (!match) return false;
-  const year = Number(match[0]);
-  return year >= 1900 ? year > 2014 : year > 1435;
-}
-
 function isSanaaPost2014Document(law: Pick<LawMeta, "title">): boolean {
   return law.title.startsWith("🔴 ");
 }
@@ -1259,7 +1247,7 @@ function LawLibrary({
             )}
             {a.amend_status === "unrecognized" && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
-                ⚠ تعديل بعد 2014 — غير معترف به
+                ⚠ تعديل بعد 2014
               </span>
             )}
             {a.amend_status === "recognized" && (
@@ -1326,7 +1314,7 @@ function LawLibrary({
         </button>
         <div
           className={"bg-surface border rounded-2xl p-5 shadow-sm mb-4 " +
-            (isUnrecognizedPost2014Law(selected) || isSanaaPost2014Document(selected)
+            (isSanaaPost2014Document(selected)
               ? "border-red-400 dark:border-red-800"
               : "border-border")}
         >
@@ -1335,11 +1323,6 @@ function LawLibrary({
               {displayLawTitle(selected.title, selected.category)}
             </h2>
             <DocTypeBadge category={selected.category} />
-            {isUnrecognizedPost2014Law(selected) && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
-                ⚠ قانون جديد بعد 2014 — غير معترف به
-              </span>
-            )}
             {isSanaaPost2014Document(selected) && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
                 صادر من صنعاء بعد 2014
@@ -1552,7 +1535,7 @@ function LawLibrary({
             key={l.id}
             onClick={() => openLaw(l)}
             className={"text-right bg-surface border rounded-xl p-4 shadow-sm transition-colors " +
-              (isUnrecognizedPost2014Law(l) || isSanaaPost2014Document(l)
+              (isSanaaPost2014Document(l)
                 ? "border-red-400 hover:border-red-600 dark:border-red-800"
                 : "border-border hover:border-primary")}
           >
@@ -1562,11 +1545,6 @@ function LawLibrary({
               </span>
               <DocTypeBadge category={l.category} />
             </div>
-            {isUnrecognizedPost2014Law(l) && (
-              <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
-                ⚠ قانون جديد بعد 2014 — غير معترف به
-              </span>
-            )}
             {isSanaaPost2014Document(l) && (
               <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
                 صادر من صنعاء بعد 2014
@@ -1860,7 +1838,7 @@ export default function Home() {
   async function shareArticle(h: SearchHit) {
     const warn =
       h.amend_status === "unrecognized"
-        ? `\n⚠ يتضمّن تعديلاً سنة ${h.amend_year} (بعد 2014) غير معترف به.`
+        ? `\n⚠ يتضمّن تعديلاً سنة ${h.amend_year} (بعد 2014).`
         : "";
     const text = `${plainArticleText(h.content)}\n\n— المصدر: ${buildCitation(h)}.${warn}\nعبر تطبيق Yemeni Laws`;
     const nav = navigator as Navigator & {
@@ -1881,7 +1859,7 @@ export default function Home() {
   async function copyArticle(h: SearchHit) {
     const warn =
       h.amend_status === "unrecognized"
-        ? `\n⚠ يتضمّن تعديلاً سنة ${h.amend_year} (بعد 2014) غير معترف به.`
+        ? `\n⚠ يتضمّن تعديلاً سنة ${h.amend_year} (بعد 2014).`
         : "";
     const text = `${h.content}\n\n— المصدر: ${buildCitation(h)}.${warn}\nعبر تطبيق Yemeni Laws`;
     try {
@@ -2351,7 +2329,7 @@ export default function Home() {
                       )}
                       {h.amend_status === "unrecognized" && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
-                          ⚠ تعديل بعد 2014 — غير معترف به
+                          ⚠ تعديل بعد 2014
                         </span>
                       )}
                       {h.amend_status === "recognized" && (
@@ -2413,8 +2391,8 @@ export default function Home() {
                       <>
                         {h.amend_status === "unrecognized" && (
                           <p className="mt-3 text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg p-2">
-                            ⚠ هذه المادة عليها تعديل أو إضافة بعد 2014 (سنة {h.amend_year})
-                            غير معترف به، ولا تتوفّر لدينا نسخة ما قبل 2014 منها.
+                            ⚠ هذه المادة عليها تعديل أو إضافة بعد 2014 (سنة {h.amend_year})،
+                            ولا تتوفّر لدينا نسخة ما قبل 2014 منها.
                           </p>
                         )}
                         {h.amend_note && h.article_number && (
@@ -2516,7 +2494,7 @@ export default function Home() {
               <>
                 {refArticle.amend_status === "unrecognized" && (
                   <span className="inline-block mb-2 text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
-                    ⚠ تعديل بعد 2014 — غير معترف به
+                    ⚠ تعديل بعد 2014
                   </span>
                 )}
                 <div className="legal-text">
