@@ -387,3 +387,13 @@ body {
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
+
+/* دوّار صغير لزر الإرسال */
+.yl-spin {
+  width: 14px; height: 14px; flex: none;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: yl-spin 0.7s linear infinite;
+}
+@keyframes yl-spin { to { transform: rotate(360deg); } }

@@ -1677,7 +1677,18 @@ export default function Home() {
   const [thinking, setThinking] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [nexusCitations, setNexusCitations] = useState<NexusCitation[]>([]);
+  const [copiedMsg, setCopiedMsg] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  function copyMsg(i: number, text: string) {
+    try {
+      navigator.clipboard?.writeText(text);
+      setCopiedMsg(i);
+      setTimeout(() => setCopiedMsg((c) => (c === i ? null : c)), 1500);
+    } catch {
+      /* تجاهل */
+    }
+  }
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
   const [community, setCommunity] = useState<CommunityItem[]>([]);
@@ -2180,13 +2191,19 @@ export default function Home() {
             <button
               onClick={() => run()}
               disabled={loading || !query.trim()}
-              className="px-5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-l from-primary-strong to-primary text-white font-medium shadow-sm hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {loading
-                ? "جارٍ المعالجة…"
-                : mode === "search"
-                  ? "بحث"
-                  : "اسأل"}
+              {loading ? (
+                <>
+                  <span className="yl-spin" />
+                  {mode === "search" ? "جارٍ البحث…" : "يُجيب…"}
+                </>
+              ) : (
+                <>
+                  {mode === "search" ? "بحث" : "اسأل"}
+                  <span aria-hidden>↩</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -2228,6 +2245,12 @@ export default function Home() {
                   <div key={i} className="yl-row yl-row-ai">
                     <div className="yl-msg-bubble yl-msg-ai">
                       <RichAnswer text={m.content} />
+                      <button
+                        onClick={() => copyMsg(i, m.content)}
+                        className="mt-1.5 text-[11px] text-muted hover:text-primary transition-colors"
+                      >
+                        {copiedMsg === i ? "✓ نُسخ" : "⧉ نسخ"}
+                      </button>
                     </div>
                     <div className="yl-avatar">⚖️</div>
                   </div>
@@ -2235,10 +2258,11 @@ export default function Home() {
               )}
               {thinking && (
                 <div className="yl-row yl-row-ai">
-                  <div className="yl-msg-bubble yl-msg-ai py-3">
+                  <div className="yl-msg-bubble yl-msg-ai py-3 flex items-center gap-2.5">
                     <span className="yl-think">
                       <span></span><span></span><span></span>
                     </span>
+                    <span className="text-xs text-muted">يستشير القوانين…</span>
                   </div>
                   <div className="yl-avatar">⚖️</div>
                 </div>
@@ -2301,6 +2325,23 @@ export default function Home() {
             )}
             <p className="text-[11px] text-muted mt-3">
               الإجابات استرشادية؛ المرجع النهائي النصّ الرسمي والمختصّ القانوني.
+            </p>
+          </section>
+        )}
+
+        {/* ترحيب أنيق قبل بدء المحادثة */}
+        {mode === "ask" && nexusHistory.length === 0 && (
+          <section className="mt-6 text-center animate-[yl-msg-in_0.4s_ease-out]">
+            <div
+              className="yl-avatar mx-auto"
+              style={{ width: 54, height: 54, fontSize: "1.6rem" }}
+            >
+              ⚖️
+            </div>
+            <p className="mt-3 font-bold text-primary text-base">المستشار القانوني</p>
+            <p className="text-xs text-muted mt-1 max-w-xs mx-auto leading-6">
+              اسأل عن أيّ مسألة في القانون اليمني، ويُجيبك مؤسَّساً على النصوص مع
+              ذكر مصادرها.
             </p>
           </section>
         )}
