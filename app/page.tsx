@@ -1996,11 +1996,22 @@ export default function Home() {
         let model = "";
         let streamedLive = false;
         // بثّ من النواة (يُستخدم مباشرةً أو كارتداد إن فشل Gemini)
+        // نحقن سياق حاسبات التطبيق المحسوب محلياً (دية/رسوم/مواريث) في رسالة
+        // النواة لتستند إليه — كما يفعل مسار Gemini تماماً.
+        const nexusMessages: NexusMessage[] = calculatorContext
+          ? [
+              ...history,
+              {
+                role: "user",
+                content: `${q}\n\n[معطيات محسوبة من حاسبات التطبيق — استند إليها في جوابك:\n${calculatorContext}]`,
+              },
+            ]
+          : [...history, userMsg];
         const streamFromNexus = async () => {
           let acc = "";
           const reply = await nexusChatStream(
             nexusUrl,
-            [...history, userMsg],
+            nexusMessages,
             (delta) => {
               acc += delta;
               setThinking(false);
