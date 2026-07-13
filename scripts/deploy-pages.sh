@@ -23,7 +23,7 @@ rm -rf out/models out/ort
 
 # كاش ذكي: اسم كاش البيانات = بصمة meta.json (يتغيّر عند إعادة تصدير البيانات فقط)
 # فيتحدّث كاش المستخدمين تلقائياً عند تغيّر البيانات، دون تصفير في النشرات الأخرى.
-DATA_HASH="$(md5sum public/data/meta.json | cut -c1-10)"
+DATA_HASH="$(cat public/data/meta.json public/data/judgments.json 2>/dev/null | md5sum | cut -c1-10)"
 sed -i "s/\(const CACHE = \"\)yemeni-laws-[0-9A-Za-z_]*\(\"\)/\1yemeni-laws-d${DATA_HASH}\2/" out/sw.js
 echo "» بصمة كاش البيانات: d${DATA_HASH}"
 

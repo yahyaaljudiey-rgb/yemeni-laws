@@ -18,6 +18,7 @@ import {
   normalizeAr,
 } from "@/lib/client-search";
 import { clientAsk } from "@/lib/client-ask";
+import { asset } from "@/lib/base-path";
 import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/client-assistant";
 import { nexusChat, nexusChatStream, type NexusMessage, type NexusCitation } from "@/lib/nexus-client";
 import { geminiChat, geminiExpandQuery } from "@/lib/gemini-client";
@@ -857,7 +858,7 @@ function AiSettings({
   );
 }
 
-type Mode = "home" | "search" | "ask" | "browse";
+type Mode = "home" | "search" | "ask" | "browse" | "judgments";
 type SearchKind = "smart" | "literal";
 
 interface LawMeta {
@@ -1574,17 +1575,178 @@ function LawLibrary({
   );
 }
 
+// ——— شاشة الأحكام القضائية المستقلة (فئة ← عدد ← قاعدة بنصّها الكامل) ———
+interface JRule { n: string; case: string; page: string; subject: string; content: string; }
+interface JColl { id: string; collection: string; category: string; issueNum: number; count: number; rules: JRule[]; }
+interface JData {
+  source: string; categories: string[]; totalCollections: number;
+  totalRules: number; withFullText: number; collections: JColl[];
+}
+
+const CAT_ICON: Record<string, string> = {
+  "جزائية": "⚖️", "مدنية": "🏠", "تجارية": "💼",
+  "إدارية": "🏛️", "شخصية": "👨‍👩‍👧", "دستورية": "📜",
+};
+
+function JudgmentsBrowser() {
+  const [data, setData] = useState<JData | null>(null);
+  const [cat, setCat] = useState<string>("");
+  const [openColl, setOpenColl] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(asset("/data/judgments.json"))
+      .then((r) => r.json())
+      .then((d: JData) => {
+        setData(d);
+        setCat(d.categories[0] ?? "");
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!data) {
+    return <p className="text-center text-muted py-10">جارٍ تحميل الأحكام القضائية…</p>;
+  }
+
+  const qn = normalizeAr(q.trim());
+  const results = qn
+    ? data.collections
+        .flatMap((c) =>
+          c.rules
+            .filter((r) => normalizeAr(`${r.subject} ${r.content}`).includes(qn))
+            .map((r) => ({ r, coll: c.collection })),
+        )
+        .slice(0, 300)
+    : null;
+
+  const catCount = (cName: string) =>
+    data.collections.filter((c) => c.category === cName).reduce((s, c) => s + c.count, 0);
+
+  const ruleKey = (coll: string, r: JRule) => `${coll}|${r.n}|${r.case}`;
+
+  const RuleItem = ({ r, coll, showColl }: { r: JRule; coll: string; showColl?: boolean }) => {
+    const k = ruleKey(coll, r);
+    const open = expanded === k;
+    return (
+      <div className="border border-border rounded-xl p-3 bg-surface shadow-sm">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted mb-1.5">
+          {showColl && <span className="text-accent font-medium">{coll}</span>}
+          {r.n && <span>قاعدة ({r.n})</span>}
+          {r.case && <span>قضية {r.case}</span>}
+          {r.page && <span>ص {r.page}</span>}
+        </div>
+        <p className="legal-text text-[1.05rem]">{r.subject}</p>
+        {r.content && (
+          <>
+            <button
+              onClick={() => setExpanded(open ? null : k)}
+              className="mt-1.5 text-xs text-primary font-medium hover:underline"
+            >
+              {open ? "▲ إخفاء النصّ الكامل" : "▼ عرض النصّ الكامل للحكم"}
+            </button>
+            {open && (
+              <div className="legal-text mt-2 pr-3 border-r-2 border-gold whitespace-pre-wrap text-[1.02rem]">
+                {r.content}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-base font-bold text-primary">⚖️ الأحكام القضائية</h2>
+        <span className="text-xs text-muted">
+          {data.totalRules} قاعدة · {data.withFullText} بنصّ كامل
+        </span>
+      </div>
+      <p className="text-xs text-muted -mt-2">{data.source}</p>
+
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="ابحث في موضوع الحكم أو نصّه…"
+        className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary transition-colors"
+      />
+
+      {results ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted">{results.length} نتيجة</p>
+          {results.map(({ r, coll }, i) => (
+            <RuleItem key={i} r={r} coll={coll} showColl />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* تبويبات الفئات */}
+          <div className="flex flex-wrap gap-2">
+            {data.categories.map((c) => (
+              <button
+                key={c}
+                onClick={() => {
+                  setCat(c);
+                  setOpenColl(null);
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  cat === c
+                    ? "bg-primary text-white"
+                    : "bg-surface border border-border text-muted hover:border-primary"
+                }`}
+              >
+                {CAT_ICON[c] ?? "📄"} {c}
+                <span className="text-[10px] opacity-70"> ({catCount(c)})</span>
+              </button>
+            ))}
+          </div>
+
+          {/* أعداد الفئة المختارة */}
+          <div className="space-y-2">
+            {data.collections
+              .filter((c) => c.category === cat)
+              .map((c) => (
+                <div key={c.id} className="border border-border rounded-xl overflow-hidden bg-surface">
+                  <button
+                    onClick={() => setOpenColl(openColl === c.id ? null : c.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-right hover:bg-background/40 transition-colors"
+                  >
+                    <span className="font-bold text-foreground">{c.collection}</span>
+                    <span className="text-xs text-muted">
+                      {c.count} قاعدة {openColl === c.id ? "▲" : "▼"}
+                    </span>
+                  </button>
+                  {openColl === c.id && (
+                    <div className="p-3 pt-0 space-y-2">
+                      {c.rules.map((r, i) => (
+                        <RuleItem key={i} r={r} coll={c.collection} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ——— الشاشة الرئيسية: هيرو + بحث سريع + شبكة أقسام ———
 function HomeScreen({
   apiKey,
   onOpenWindow,
   onSearch,
   onAsk,
+  onJudgments,
 }: {
   apiKey: string;
   onOpenWindow: (w: string) => void;
   onSearch: () => void;
   onAsk: () => void;
+  onJudgments: () => void;
 }) {
   const cards: {
     icon: string;
@@ -1595,7 +1757,7 @@ function HomeScreen({
     { icon: "📗", title: "القوانين", sub: "الدستور والقوانين", onClick: () => onOpenWindow("قانون") },
     { icon: "📘", title: "اللوائح", sub: "اللوائح التنظيمية", onClick: () => onOpenWindow("لائحة") },
     { icon: "🤝", title: "الاتفاقيات", sub: "الاتفاقيات والمواثيق", onClick: () => onOpenWindow("اتفاقية") },
-    { icon: "⚖️", title: "الأحكام والقواعد القضائية", sub: "أحكام ومبادئ", onClick: () => onOpenWindow("حكم") },
+    { icon: "⚖️", title: "الأحكام القضائية", sub: "سوابق بنصّها الكامل", onClick: onJudgments },
     { icon: "🏛️", title: "تعليمات النيابة", sub: "تعليمات وتعاميم", onClick: () => onOpenWindow("نيابة") },
   ];
   return (
@@ -2111,6 +2273,7 @@ export default function Home() {
             }}
             onSearch={() => setMode("search")}
             onAsk={() => setMode("ask")}
+            onJudgments={() => setMode("judgments")}
           />
         ) : mode === "browse" ? (
           <LawLibrary
@@ -2122,6 +2285,8 @@ export default function Home() {
             speakingId={speakingId}
             copiedId={copiedId}
           />
+        ) : mode === "judgments" ? (
+          <JudgmentsBrowser />
         ) : (
           <>
         {/* عنوان الوضع + رجوع للرئيسية */}
@@ -2563,7 +2728,9 @@ export default function Home() {
       <SiteFooter />
 
       <AppBottomNav
-        active={mode === "ask" ? "search" : mode}
+        active={
+          mode === "ask" ? "search" : mode === "judgments" ? "browse" : mode
+        }
         onNav={(s) => setMode(s)}
         onAi={() => setShowAi(true)}
       />
