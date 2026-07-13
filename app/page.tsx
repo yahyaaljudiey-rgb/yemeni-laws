@@ -1581,6 +1581,7 @@ interface JColl { id: string; collection: string; category: string; issueNum: nu
 interface JData {
   source: string; categories: string[]; totalCollections: number;
   totalRules: number; withFullText: number; collections: JColl[];
+  topicIndex?: Record<string, string[]>; // فهرس موضوعي: دائرة → مواضيع
 }
 
 const CAT_ICON: Record<string, string> = {
@@ -1594,6 +1595,7 @@ function JudgmentsBrowser() {
   const [openColl, setOpenColl] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [view, setView] = useState<"issues" | "topics">("issues");
 
   useEffect(() => {
     fetch(asset("/data/judgments.json"))
@@ -1673,11 +1675,49 @@ function JudgmentsBrowser() {
         className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary transition-colors"
       />
 
+      {!q && data.topicIndex && (
+        <div className="inline-flex gap-1 rounded-xl border border-border bg-background p-1">
+          {(["issues", "topics"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                view === v ? "bg-primary text-white" : "text-muted hover:text-primary"
+              }`}
+            >
+              {v === "issues" ? "حسب العدد" : "حسب الموضوع"}
+            </button>
+          ))}
+        </div>
+      )}
+
       {results ? (
         <div className="space-y-2">
           <p className="text-xs text-muted">{results.length} نتيجة</p>
           {results.map(({ r, coll }, i) => (
             <RuleItem key={i} r={r} coll={coll} showColl />
+          ))}
+        </div>
+      ) : view === "topics" && data.topicIndex ? (
+        <div className="space-y-4">
+          {Object.entries(data.topicIndex).map(([chamber, topics]) => (
+            <div key={chamber}>
+              <h3 className="text-sm font-bold text-primary mb-2">
+                الدائرة {chamber}{" "}
+                <span className="text-xs text-muted font-normal">({topics.length})</span>
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {topics.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setQ(t)}
+                    className="text-xs px-2.5 py-1 rounded-full bg-surface border border-border text-foreground hover:bg-primary hover:text-white hover:border-primary transition-colors"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (
