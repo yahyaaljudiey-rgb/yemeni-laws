@@ -74,6 +74,35 @@ export default function AboutPage() {
           </ul>
         </Section>
 
+        <Section title="ما الجديد">
+          <ul className="list-disc ps-5 space-y-1">
+            <li>
+              <strong>نافذة «الأحكام القضائية»</strong> المستقلّة: سوابق المحكمة
+              العليا بنصّها الكامل (1990 قاعدة)، تصفّح حسب الفئة وحسب الموضوع
+              (الدوائر)، وبحث في موضوع الحكم ونصّه.
+            </li>
+            <li>
+              <strong>مساعد ذكي محسّن:</strong> بثّ حيّ للإجابة، ومصادر قابلة
+              للنقر، واستناد إلى نصوص القوانين والأحكام.
+            </li>
+            <li>
+              <strong>حاسبة المواعيد:</strong> مراعاة العطل الرسمية والعطلة
+              القضائية (رمضان) مع امتداد اليوم الأخير، وتمييز القضايا المستعجلة.
+            </li>
+            <li>
+              <strong>حاسبة الرسوم القضائية:</strong> اعتماد صيغة قرار عدن رقم
+              (41) لسنة 2025م، مع الرسوم الثابتة وأسس تقدير قيمة الدعوى.
+            </li>
+            <li>
+              <strong>حاسبة الديات والأروش:</strong> وفق جدول قرار رقم (51) لسنة
+              2024م.
+            </li>
+            <li>
+              تمييز التعديلات الصادرة بعد 2014 (غير المعترف بها) بتنبيهٍ واضح.
+            </li>
+          </ul>
+        </Section>
+
         <Section title="المصادر والمنهج">
           <p>
             جُمعت النصوص من مصادر القوانين اليمنية، واعتُمدت في الرسوم القضائية
@@ -93,12 +122,22 @@ export default function AboutPage() {
           </p>
         </Section>
 
-        <Section title="الإعداد والتطوير">
+        <Section title="الإعداد والمراجعة">
           <div className="yl-footer-sign justify-start">
             <span className="yl-footer-name">يحيى الجديعي</span>
             <span className="yl-footer-line" aria-hidden />
           </div>
-          <p className="mt-1">
+          <p className="mt-1 text-muted text-[13px]">الإعداد والتطوير</p>
+          <p className="mt-3">
+            <strong>المراجعة القانونية للمواد والمدخلات:</strong>
+            <br />
+            القاضي علاء الفخري، والقاضي يحيى مخارش.
+          </p>
+          <p className="mt-1 text-[13px] text-foreground/70">
+            تُراجَع مواد التطبيق ومدخلاته (بما فيها أسس الحاسبات) من القاضيَين
+            المذكورَين لضمان دقّتها.
+          </p>
+          <p className="mt-3">
             للتواصل والملاحظات:{" "}
             <a
               href="mailto:yahyaaljudiey@gmail.com"
