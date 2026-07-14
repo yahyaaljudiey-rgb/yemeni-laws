@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, Fragment } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import Link from "next/link";
 import SiteFooter from "./site-footer";
 import AppBottomNav from "./app-bottom-nav";
@@ -1961,7 +1961,16 @@ function HomeScreen({
 }
 
 export default function Home() {
-  const [mode, setMode] = useState<Mode>("home");
+  const [mode, setModeState] = useState<Mode>("home");
+  const fromPopRef = useRef(false);
+  // التنقّل بين النوافذ مربوط بسجلّ المتصفّح: كل انتقال يدفع حالةً، فيعيد زرّ
+  // رجوع الهاتف/المتصفّح إلى النافذة السابقة بدل الخروج من التطبيق.
+  const setMode = useCallback((m: Mode) => {
+    if (!fromPopRef.current && typeof window !== "undefined") {
+      window.history.pushState({ ylMode: m }, "");
+    }
+    setModeState(m);
+  }, []);
   const [browseWindow, setBrowseWindow] = useState<string>("قانون");
   const [query, setQuery] = useState("");
   const [searchKind, setSearchKind] = useState<SearchKind>("smart");
@@ -2035,6 +2044,18 @@ export default function Home() {
     }
     const win = new URLSearchParams(window.location.search).get("win");
     if (win) setBrowseWindow(win);
+  }, []);
+
+  // زرّ الرجوع (الهاتف/المتصفّح): يعيد إلى النافذة السابقة بدل الخروج
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      fromPopRef.current = true;
+      const m = (e.state as { ylMode?: Mode } | null)?.ylMode ?? "home";
+      setModeState(m);
+      fromPopRef.current = false;
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   // تحميل مفتاح المستخدم المحفوظ محلياً (BYOK) عند الإقلاع
