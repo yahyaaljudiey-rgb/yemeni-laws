@@ -112,10 +112,11 @@ export interface SkippedHoliday {
 export interface DeadlineResult {
   rule: DeadlineRule;
   start: Date;
-  rawDeadline: Date; // الموعد قبل مراعاة العطل (تقويمي)
-  deadline: Date; // الموعد بعد امتداد اليوم الأخير إن صادف عطلة
+  rawDeadline: Date; // الموعد لو حُسبت العطل (تقويمي، للمقارنة)
+  deadline: Date; // الموعد الفعلي بعد استبعاد كل العطل من العدّ
   extended: boolean;
-  skippedHolidays: SkippedHoliday[]; // العطل التي أدّت للامتداد
+  skippedHolidays: SkippedHoliday[]; // أيام العطل المستبعَدة (مفصّلة)
+  skippedDays: number; // عدد أيام العطل المستبعَدة من المدّة
   daysRemaining: number; // من اليوم حتى آخر موعد (سالب = انقضى)
   expired: boolean;
   isLastDay: boolean;
@@ -150,8 +151,8 @@ function toHijri(d: Date): { m: number; d: number } {
   };
 }
 
-// اسم العطلة إن كان اليوم عطلة (نهاية أسبوع/رسمية/عيد/عطلة قضائية رمضان)، وإلا null.
-// urgent = قضية مستعجلة: تُنظر خلال العطلة القضائية (م.73) فلا يوقفها رمضان،
+// اسم العطلة إن كان اليوم عطلة (نهاية أسبوع/رسمية/عيد/عطلة قضائية)، وإلا null.
+// urgent = قضية مستعجلة: تُنظر خلال العطلة القضائية (م.73) فلا يوقفها رمضان ولا ذو الحجة،
 // لكنها تظل تتأثّر بالجمعة/السبت والعطل الرسمية والأعياد.
 // ملاحظة: العطل الهجرية تقريبية (أم القرى) وقد تختلف يوماً بحسب الرؤية.
 export function holidayName(d: Date, urgent = false): string | null {
@@ -163,31 +164,18 @@ export function holidayName(d: Date, urgent = false): string | null {
   );
   if (fixed) return fixed.name;
   const h = toHijri(d);
-  if (h.m === 10 && h.d <= 3) return "عيد الفطر";
+  // عيد الفطر: من 29 رمضان إلى 3 شوال (م.3/أ من قانون الإجازات 2/2000)
+  if ((h.m === 9 && h.d >= 29) || (h.m === 10 && h.d <= 3)) return "عيد الفطر";
+  // عيد الأضحى: من 9 ذي الحجة إلى رابع أيام العيد (م.3/أ)
   if (h.m === 12 && h.d >= 9 && h.d <= 13) return "عيد الأضحى";
+  // ذكرى الهجرة النبوية: أول محرم (م.3/أ)
   if (h.m === 1 && h.d === 1) return "رأس السنة الهجرية";
-  // رمضان أحد شهرَي العطلة القضائية (م.73) — لا يوقف مواعيد القضايا المستعجلة
+  // (المولد النبوي والإسراء والمعراج: مناسبات بلا إجازة رسمية — م.3/ب — فلا تُستبعَد)
+  // العطلة القضائية شهران (م.73): رمضان وذو الحجة — لا يوقفان مواعيد القضايا المستعجلة.
+  // (عيد الأضحى في ذي الحجة عطلةٌ تامّة تُفحص قبلُ فتوقف حتى المستعجلة.)
   if (h.m === 9 && !urgent) return "العطلة القضائية (رمضان)";
+  if (h.m === 12 && !urgent) return "العطلة القضائية (ذو الحجة)";
   return null;
-}
-
-// يمدّ التاريخ إلى أول يوم عمل تالٍ إن صادف عطلة (م.111: العطلات توقف المواعيد)
-function nextWorkingDay(
-  d: Date,
-  urgent: boolean,
-): { date: Date; skipped: SkippedHoliday[] } {
-  const skipped: SkippedHoliday[] = [];
-  let r = new Date(d.getTime());
-  let name: string | null;
-  let guard = 0;
-  while ((name = holidayName(r, urgent)) !== null && guard < 45) {
-    if (!skipped.some((s) => s.name === name)) {
-      skipped.push({ date: new Date(r.getTime()), name });
-    }
-    r = addDays(r, 1);
-    guard++;
-  }
-  return { date: r, skipped };
 }
 
 // يحسب الفرق بالأيام بين تاريخين (تقويمي، بتجاهل الوقت)
@@ -203,10 +191,23 @@ export function computeDeadline(
   today: Date = new Date(),
   urgent = false,
 ): DeadlineResult {
-  // آخر يوم تقويمي = تاريخ البدء + المدة
+  // الموعد لو حُسبت العطل (للمقارنة فقط)
   const rawDeadline = addDays(startDate, rule.days);
-  // إن صادف اليوم الأخير عطلة (جمعة/سبت/رسمية/عيد/عطلة قضائية) يُمدّ لأول يوم عمل
-  const { date: deadline, skipped } = nextWorkingDay(rawDeadline, urgent);
+  // القاعدة (م.111): العطلات توقف المواعيد — فلا تُحسب أيامها ضمن المدّة.
+  // نعدّ «مدّة الميعاد» أيامَ عملٍ فقط، متخطّين كل عطلة (جمعة/سبت/رسمية/دينية/
+  // عيد/عطلة قضائية) أينما وقعت داخل المدّة.
+  const skipped: SkippedHoliday[] = [];
+  let cur = new Date(startDate.getTime());
+  let counted = 0;
+  let guard = 0;
+  while (counted < rule.days && guard < 3000) {
+    cur = addDays(cur, 1);
+    const name = holidayName(cur, urgent);
+    if (name === null) counted++;
+    else skipped.push({ date: new Date(cur.getTime()), name });
+    guard++;
+  }
+  const deadline = cur; // اليوم الأخير = يوم عمل بحكم البناء
   const daysRemaining = diffDays(deadline, today);
   return {
     rule,
@@ -215,6 +216,7 @@ export function computeDeadline(
     deadline,
     extended: skipped.length > 0,
     skippedHolidays: skipped,
+    skippedDays: skipped.length,
     daysRemaining,
     expired: daysRemaining < 0,
     isLastDay: daysRemaining === 0,
