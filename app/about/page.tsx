@@ -128,15 +128,22 @@ export default function AboutPage() {
             <span className="yl-footer-line" aria-hidden />
           </div>
           <p className="mt-1 text-muted text-[13px]">الإعداد والتطوير</p>
-          <p className="mt-3">
-            <strong>المراجعة القانونية للمواد والمدخلات:</strong>
-            <br />
-            القاضي علاء الفخري، والقاضي يحيى مخارش.
-          </p>
-          <p className="mt-1 text-[13px] text-foreground/70">
-            تُراجَع مواد التطبيق ومدخلاته (بما فيها أسس الحاسبات) من القاضيَين
-            المذكورَين لضمان دقّتها.
-          </p>
+
+          <div className="yl-reviewers mt-4">
+            <span className="yl-reviewers-head">
+              <span className="yl-reviewers-icon" aria-hidden>
+                ⚖️
+              </span>
+              مراجعة قضائية
+            </span>
+            <p className="yl-reviewers-note">
+              تُراجَع مواد التطبيق ومدخلاته (بما فيها أسس الحاسبات) لضمان دقّتها من:
+            </p>
+            <div className="yl-reviewers-names">
+              <span className="yl-judge">القاضي علاء الفخري</span>
+              <span className="yl-judge">القاضي يحيى مخارش</span>
+            </div>
+          </div>
           <p className="mt-3">
             للتواصل والملاحظات:{" "}
             <a
