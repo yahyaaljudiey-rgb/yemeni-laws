@@ -11,6 +11,8 @@ export interface NexusCitation {
   documentId: string;
   chunkId: string;
   score: number;
+  // Phase 14 (اختياري، إضافي): مصدرية/تعاضد الدليل عبر مصادر المعرفة
+  provenance?: Record<string, unknown>;
 }
 
 export interface NexusReply {
@@ -73,6 +75,7 @@ export async function nexusChat(
       detail?: string;
       citations?: {
         ref: number; source: string; document_id: string; chunk_id: string; score: number;
+        provenance?: Record<string, unknown>;
       }[];
     } | null;
     if (!response.ok) {
@@ -89,6 +92,7 @@ export async function nexusChat(
         documentId: c.document_id,
         chunkId: c.chunk_id,
         score: c.score,
+        provenance: c.provenance,
       })),
     };
   } catch (error) {
@@ -152,7 +156,8 @@ export async function nexusChatStream(
         }
         if (!dataStr) continue;
         let data: { content?: string; model?: string; detail?: string;
-          citations?: { ref: number; source: string; document_id: string; chunk_id: string; score: number }[] };
+          citations?: { ref: number; source: string; document_id: string; chunk_id: string; score: number;
+            provenance?: Record<string, unknown> }[] };
         try { data = JSON.parse(dataStr); } catch { continue; }
         if (event === "token" && data.content) {
           content += data.content;
@@ -161,7 +166,7 @@ export async function nexusChatStream(
           model = data.model || model;
           citations = (data.citations ?? []).map((c) => ({
             ref: c.ref, source: c.source, documentId: c.document_id,
-            chunkId: c.chunk_id, score: c.score,
+            chunkId: c.chunk_id, score: c.score, provenance: c.provenance,
           }));
         } else if (event === "error") {
           throw new Error(data.detail || "خطأ من خادم Nexus");

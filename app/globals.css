@@ -342,50 +342,51 @@ body {
   line-height: 0;
   padding: 0 1px;
 }
-.yl-ans-bullet { display: flex; gap: 6px; margin: 2px 0; }
-.yl-ans-bullet > span:first-child { color: var(--primary); font-weight: 700; }
-.yl-ans p { margin: 4px 0; }
+.yl-ans-bullet { display: flex; gap: 8px; margin: 3px 0; align-items: baseline; }
+.yl-ans-bullet > span:first-child { color: var(--primary); font-weight: 700; flex: none; min-width: 1em; }
+.yl-ans p { margin: 5px 0; }
 .yl-ans strong { font-weight: 700; color: var(--foreground); }
+.yl-ans-h { font-weight: 700; color: var(--primary); margin: 0.7rem 0 0.15rem; line-height: 1.5; }
+.yl-ans-h1 { font-size: 1.18rem; }
+.yl-ans-h2 { font-size: 1.1rem; }
+.yl-ans-h3 { font-size: 1.03rem; color: var(--foreground); }
 
-/* ─────────── تصميم الشات الأنيق ─────────── */
-.yl-chat { display: flex; flex-direction: column; gap: 0.85rem; }
-.yl-row { display: flex; align-items: flex-end; gap: 0.5rem; animation: yl-msg-in 0.3s ease-out; }
-.yl-row-user { justify-content: flex-start; }  /* RTL: يمين */
-.yl-row-ai { justify-content: flex-end; }       /* RTL: يسار */
-@keyframes yl-msg-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+/* ─────────── واجهة الشات بأسلوب ChatGPT/Claude (صفوف بعرض كامل) ─────────── */
+.yl-chat { display: flex; flex-direction: column; gap: 1.4rem; }
+.yl-turn { animation: yl-msg-in 0.3s ease-out; }
+@keyframes yl-msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.yl-msg-bubble {
-  max-width: 85%;
-  padding: 0.68rem 0.95rem;
-  font-size: 1.02rem;
-  line-height: 1.95;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
-}
-.yl-msg-user {
-  background: linear-gradient(135deg, var(--primary-strong), var(--primary));
-  color: #fff;
-  border-radius: 1.15rem;
-  border-start-end-radius: 0.35rem;   /* ذيل ناحية المستخدم */
-}
-.yl-msg-ai {
+.yl-turn-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.yl-turn-name { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+.yl-turn-ai .yl-turn-name { color: var(--primary); }
+.yl-turn-body { font-size: 1.04rem; line-height: 1.95; }
+.yl-turn-user .yl-turn-body {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 1.15rem;
-  border-start-start-radius: 0.35rem;  /* ذيل ناحية المستشار */
-  position: relative;
-  padding-inline-start: 1.05rem;
+  border-radius: 0.9rem;
+  padding: 0.7rem 1rem;
+  color: var(--foreground);
 }
-.yl-msg-ai::before {   /* شريط ذهبي رفيع يميّز المستشار */
-  content: ""; position: absolute; inset-block: 0.55rem; inset-inline-start: 0;
-  width: 3px; border-radius: 3px;
-  background: linear-gradient(var(--gold), var(--accent));
+.yl-turn-ai .yl-turn-body {
+  padding-inline-start: 0.15rem;
+  border-inline-start: 2px solid transparent;
 }
+.yl-turn-actions { display: flex; gap: 1.1rem; margin-top: 0.6rem; padding-inline-start: 0.15rem; }
+.yl-act {
+  font-size: 0.74rem; color: var(--muted); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+  transition: color 0.15s;
+}
+.yl-act:hover { color: var(--primary); }
 .yl-avatar {
   width: 30px; height: 30px; flex: none;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 0.95rem;
+  font-size: 0.95rem; color: #fff;
   background: linear-gradient(135deg, var(--primary), var(--primary-strong));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.yl-avatar-user {
+  background: linear-gradient(135deg, var(--gold), var(--accent));
 }
 
 /* دوّار صغير لزر الإرسال */

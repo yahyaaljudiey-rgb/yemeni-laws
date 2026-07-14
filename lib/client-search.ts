@@ -66,7 +66,7 @@ let _vectors: Promise<Float32Array> | null = null;
 export function normalizeAr(s: string): string {
   return s
     .replace(/[ً-ْٰ]/g, "") // تشكيل
-    .replace(/[إأآا]/g, "ا")
+    .replace(/[إأآٱا]/g, "ا") // يشمل ألف الوصل ٱ (مطابقة لتطبيع نواة Phase 15)
     .replace(/ى/g, "ي")
     .replace(/ؤ/g, "و")
     .replace(/ئ/g, "ي")

@@ -21,6 +21,7 @@ import { clientAsk } from "@/lib/client-ask";
 import { asset } from "@/lib/base-path";
 import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/client-assistant";
 import { nexusChat, nexusChatStream, type NexusMessage, type NexusCitation } from "@/lib/nexus-client";
+import { exportLegalPdf, type LegalDoc } from "@/lib/pdf-export";
 import { geminiChat, geminiExpandQuery } from "@/lib/gemini-client";
 
 const GEMINI_ONLY_BUILD = process.env.NEXT_PUBLIC_GEMINI_ONLY === "1";
@@ -930,18 +931,34 @@ function RichAnswer({ text }: { text: string }) {
   return (
     <div className="yl-ans legal-text text-[1.02rem]">
       {lines.map((line, i) => {
-        const isBullet = /^\s*[*-]\s+/.test(line);
-        const clean = line.replace(/^\s*[*-]\s+/, "");
-        if (!clean.trim()) return <div key={i} style={{ height: "0.4rem" }} />;
-        if (isBullet) {
+        if (!line.trim()) return <div key={i} style={{ height: "0.4rem" }} />;
+        const h = /^(#{1,3})\s+(.*)$/.exec(line);
+        if (h) {
+          return (
+            <p key={i} className={`yl-ans-h yl-ans-h${h[1].length}`}>
+              {renderInline(h[2], `h${i}`)}
+            </p>
+          );
+        }
+        const ol = /^\s*(\d+)[.)]\s+(.*)$/.exec(line);
+        if (ol) {
           return (
             <div key={i} className="yl-ans-bullet">
-              <span>•</span>
-              <span>{renderInline(clean, `l${i}`)}</span>
+              <span>{ol[1]}.</span>
+              <span>{renderInline(ol[2], `o${i}`)}</span>
             </div>
           );
         }
-        return <p key={i}>{renderInline(clean, `l${i}`)}</p>;
+        const ul = /^\s*[*\-•]\s+(.*)$/.exec(line);
+        if (ul) {
+          return (
+            <div key={i} className="yl-ans-bullet">
+              <span>•</span>
+              <span>{renderInline(ul[1], `u${i}`)}</span>
+            </div>
+          );
+        }
+        return <p key={i}>{renderInline(line.trim(), `l${i}`)}</p>;
       })}
     </div>
   );
@@ -1289,6 +1306,23 @@ function LawLibrary({
               >
                 {copiedId === a.article_id ? <>✓ تم النسخ</> : <>⧉ نسخ</>}
               </button>
+              <button
+                onClick={() =>
+                  exportLegalPdf({
+                    kind: "article",
+                    title: `${hit.law_title}${hit.law_number ? ` رقم (${hit.law_number})` : ""}${hit.year ? ` لسنة ${hit.year}م` : ""}`,
+                    subtitle: hit.article_number
+                      ? `المادة (${hit.article_number})`
+                      : a.heading || undefined,
+                    bodyText: plainArticleText(a.content),
+                    citations: [buildCitation(hit)],
+                  })
+                }
+                title="تحميل المادة كـ PDF"
+                className="text-xs px-2.5 py-1 rounded-lg border border-border hover:border-primary hover:text-primary transition-colors"
+              >
+                ⬇ PDF
+              </button>
             </div>
           </div>
           <div className="legal-text">
@@ -1581,7 +1615,7 @@ interface JColl { id: string; collection: string; category: string; issueNum: nu
 interface JData {
   source: string; categories: string[]; totalCollections: number;
   totalRules: number; withFullText: number; collections: JColl[];
-  topicIndex?: Record<string, string[]>; // فهرس موضوعي: دائرة → مواضيع
+  topicIndex?: Record<string, [string, number][]>; // فهرس موضوعي: دائرة → [موضوع، عدد القواعد]
 }
 
 const CAT_ICON: Record<string, string> = {
@@ -1596,6 +1630,7 @@ function JudgmentsBrowser() {
   const [q, setQ] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [view, setView] = useState<"issues" | "topics">("issues");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(asset("/data/judgments.json"))
@@ -1627,6 +1662,39 @@ function JudgmentsBrowser() {
 
   const ruleKey = (coll: string, r: JRule) => `${coll}|${r.n}|${r.case}`;
 
+  // نسخ القاعدة/الحكم مع عزو تلقائي للمصدر في نهايته
+  async function copyRule(coll: string, r: JRule) {
+    const k = ruleKey(coll, r);
+    const body = r.content ? `${r.subject}\n\n${r.content}` : r.subject;
+    const cite = ["المحكمة العليا اليمنية", coll]
+      .concat(r.case ? `قضية ${r.case}` : [])
+      .concat(r.page ? `ص ${r.page}` : [])
+      .join("، ");
+    const text = `${body}\n\n— المصدر: ${cite}.\nعبر تطبيق Yemeni Laws`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(k);
+      setTimeout(() => setCopiedKey((c) => (c === k ? null : c)), 2000);
+    } catch {
+      /* تجاهل */
+    }
+  }
+
+  // تصدير الحكم كوثيقة قانونية PDF
+  function exportRuleP(coll: string, r: JRule) {
+    exportLegalPdf({
+      kind: "ruling",
+      title: "قاعدة قضائية — المحكمة العليا اليمنية",
+      subtitle: coll,
+      meta: [
+        { label: "القاعدة", value: r.n ? String(r.n) : "" },
+        { label: "القضية", value: r.case ? String(r.case) : "" },
+        { label: "الصفحة", value: r.page ? String(r.page) : "" },
+      ],
+      bodyText: r.content ? `**${r.subject}**\n\n${r.content}` : r.subject,
+    });
+  }
+
   const RuleItem = ({ r, coll, showColl }: { r: JRule; coll: string; showColl?: boolean }) => {
     const k = ruleKey(coll, r);
     const open = expanded === k;
@@ -1639,20 +1707,34 @@ function JudgmentsBrowser() {
           {r.page && <span>ص {r.page}</span>}
         </div>
         <p className="legal-text text-[1.05rem]">{r.subject}</p>
-        {r.content && (
-          <>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+          {r.content && (
             <button
               onClick={() => setExpanded(open ? null : k)}
-              className="mt-1.5 text-xs text-primary font-medium hover:underline"
+              className="text-xs text-primary font-medium hover:underline"
             >
               {open ? "▲ إخفاء النصّ الكامل" : "▼ عرض النصّ الكامل للحكم"}
             </button>
-            {open && (
-              <div className="legal-text mt-2 pr-3 border-r-2 border-gold whitespace-pre-wrap text-[1.02rem]">
-                {r.content}
-              </div>
-            )}
-          </>
+          )}
+          <button
+            onClick={() => copyRule(coll, r)}
+            title="نسخ الحكم مع العزو"
+            className="text-xs text-muted font-medium hover:text-primary"
+          >
+            {copiedKey === k ? "✓ تم النسخ" : "⧉ نسخ"}
+          </button>
+          <button
+            onClick={() => exportRuleP(coll, r)}
+            title="تحميل الحكم كـ PDF"
+            className="text-xs text-muted font-medium hover:text-primary"
+          >
+            ⬇ PDF
+          </button>
+        </div>
+        {r.content && open && (
+          <div className="legal-text mt-2 pr-3 border-r-2 border-gold whitespace-pre-wrap text-[1.02rem]">
+            {r.content}
+          </div>
         )}
       </div>
     );
@@ -1692,33 +1774,58 @@ function JudgmentsBrowser() {
       )}
 
       {results ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted">{results.length} نتيجة</p>
-          {results.map(({ r, coll }, i) => (
-            <RuleItem key={i} r={r} coll={coll} showColl />
-          ))}
-        </div>
+        results.length === 0 ? (
+          <div className="text-center text-muted py-10 text-sm">
+            لا توجد أحكام تطابق «{q.trim()}».
+            <br />
+            جرّب كلمةً أقصر أو مرادفاً، أو تصفّح حسب الفئة/الموضوع.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-muted">{results.length} نتيجة</p>
+            {results.map(({ r, coll }, i) => (
+              <RuleItem key={i} r={r} coll={coll} showColl />
+            ))}
+          </div>
+        )
       ) : view === "topics" && data.topicIndex ? (
         <div className="space-y-4">
-          {Object.entries(data.topicIndex).map(([chamber, topics]) => (
-            <div key={chamber}>
-              <h3 className="text-sm font-bold text-primary mb-2">
-                الدائرة {chamber}{" "}
-                <span className="text-xs text-muted font-normal">({topics.length})</span>
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {topics.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setQ(t)}
-                    className="text-xs px-2.5 py-1 rounded-full bg-surface border border-border text-foreground hover:bg-primary hover:text-white hover:border-primary transition-colors"
-                  >
-                    {t}
-                  </button>
-                ))}
+          <p className="text-xs text-muted">
+            فهرس أحكام المحكمة العليا حسب الدوائر. الرقم = عدد القواعد المتوفّرة
+            تحت الموضوع (مواضيع بلا رقم ستُضاف أحكامها لاحقاً).
+          </p>
+          {Object.entries(data.topicIndex).map(([chamber, topics]) => {
+            const withContent = topics.filter(([, c]) => c > 0).length;
+            return (
+              <div key={chamber}>
+                <h3 className="text-sm font-bold text-primary mb-2">
+                  {chamber}{" "}
+                  <span className="text-xs text-muted font-normal">
+                    ({withContent} موضوعاً بقواعد من {topics.length})
+                  </span>
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {topics.map(([t, c]) => (
+                    <button
+                      key={t}
+                      onClick={() => setQ(t)}
+                      title={c ? `${c} قاعدة` : "لا توجد قواعد بعد"}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1 ${
+                        c > 0
+                          ? "bg-surface border-border text-foreground hover:bg-primary hover:text-white hover:border-primary"
+                          : "bg-transparent border-dashed border-border/70 text-muted/60"
+                      }`}
+                    >
+                      {t}
+                      {c > 0 && (
+                        <span className="text-[10px] font-bold opacity-70">{c}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <>
@@ -1890,6 +1997,30 @@ export default function Home() {
     } catch {
       /* تجاهل */
     }
+  }
+
+  // تصدير إجابة المستشار كمذكّرة قانونية PDF (بالسؤال والمصادر)
+  function exportChatAnswer(i: number) {
+    const answer = nexusHistory[i]?.content;
+    if (!answer) return;
+    const prev = nexusHistory[i - 1];
+    const question = prev?.role === "user" ? prev.content : undefined;
+    const cites: string[] = [];
+    if (i === nexusHistory.length - 1) {
+      for (const s of sources)
+        cites.push(
+          `${s.law_title}${s.article_number ? ` — مادة (${s.article_number})` : ""}`,
+        );
+      for (const c of nexusCitations) if (c.source) cites.push(c.source);
+    }
+    exportLegalPdf({
+      kind: "memo",
+      title: "مذكرة قانونية",
+      subtitle: "المستشار القانوني — تطبيق القوانين اليمنية",
+      question,
+      bodyText: answer,
+      citations: Array.from(new Set(cites)),
+    });
   }
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
@@ -2461,44 +2592,59 @@ export default function Home() {
             <div className="yl-chat">
               {nexusHistory.map((m, i) =>
                 m.role === "user" ? (
-                  <div key={i} className="yl-row yl-row-user">
-                    <div className="yl-msg-bubble yl-msg-user whitespace-pre-wrap">
+                  <div key={i} className="yl-turn yl-turn-user">
+                    <div className="yl-turn-head">
+                      <div className="yl-avatar yl-avatar-user">👤</div>
+                      <span className="yl-turn-name">أنت</span>
+                    </div>
+                    <div className="yl-turn-body whitespace-pre-wrap">
                       {m.content}
                     </div>
                   </div>
                 ) : (
-                  <div key={i} className="yl-row yl-row-ai">
-                    <div className="yl-msg-bubble yl-msg-ai">
+                  <div key={i} className="yl-turn yl-turn-ai">
+                    <div className="yl-turn-head">
+                      <div className="yl-avatar">⚖️</div>
+                      <span className="yl-turn-name">المستشار القانوني</span>
+                    </div>
+                    <div className="yl-turn-body">
                       <RichAnswer text={m.content} />
-                      <button
-                        onClick={() => copyMsg(i, m.content)}
-                        className="mt-1.5 text-[11px] text-muted hover:text-primary transition-colors"
-                      >
+                    </div>
+                    <div className="yl-turn-actions">
+                      <button className="yl-act" onClick={() => copyMsg(i, m.content)}>
                         {copiedMsg === i ? "✓ نُسخ" : "⧉ نسخ"}
                       </button>
+                      <button className="yl-act" onClick={() => exportChatAnswer(i)}>
+                        ⬇ تصدير PDF
+                      </button>
                     </div>
-                    <div className="yl-avatar">⚖️</div>
                   </div>
                 ),
               )}
               {thinking && (
-                <div className="yl-row yl-row-ai">
-                  <div className="yl-msg-bubble yl-msg-ai py-3 flex items-center gap-2.5">
+                <div className="yl-turn yl-turn-ai">
+                  <div className="yl-turn-head">
+                    <div className="yl-avatar">⚖️</div>
+                    <span className="yl-turn-name">المستشار القانوني</span>
+                  </div>
+                  <div className="yl-turn-body flex items-center gap-2.5 py-1">
                     <span className="yl-think">
                       <span></span><span></span><span></span>
                     </span>
                     <span className="text-xs text-muted">يستشير القوانين…</span>
                   </div>
-                  <div className="yl-avatar">⚖️</div>
                 </div>
               )}
               {!thinking && streamText && (
-                <div className="yl-row yl-row-ai">
-                  <div className="yl-msg-bubble yl-msg-ai">
+                <div className="yl-turn yl-turn-ai">
+                  <div className="yl-turn-head">
+                    <div className="yl-avatar">⚖️</div>
+                    <span className="yl-turn-name">المستشار القانوني</span>
+                  </div>
+                  <div className="yl-turn-body">
                     <RichAnswer text={streamText} />
                     <span className="yl-caret" />
                   </div>
-                  <div className="yl-avatar">⚖️</div>
                 </div>
               )}
               <div ref={chatEndRef} />
