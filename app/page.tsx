@@ -21,7 +21,7 @@ import { clientAsk } from "@/lib/client-ask";
 import { asset } from "@/lib/base-path";
 import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/client-assistant";
 import { nexusChat, nexusChatStream, type NexusMessage, type NexusCitation } from "@/lib/nexus-client";
-import { exportLegalPdf, type LegalDoc } from "@/lib/pdf-export";
+import { exportLegalPdf, downloadLegalWord, copyLegalRich, type LegalDoc } from "@/lib/pdf-export";
 import { geminiChat, geminiExpandQuery } from "@/lib/gemini-client";
 
 const GEMINI_ONLY_BUILD = process.env.NEXT_PUBLIC_GEMINI_ONLY === "1";
@@ -905,7 +905,11 @@ function isSanaaPost2014Document(law: Pick<LawMeta, "title">): boolean {
 }
 
 // تنسيق نصّي خفيف داخل السطر: **غليظ** و[عزو] بلون مختلف
-function renderInline(text: string, kp: string): React.ReactNode[] {
+function renderInline(
+  text: string,
+  kp: string,
+  onCite?: (n: number) => void,
+): React.ReactNode[] {
   const out: React.ReactNode[] = [];
   const re = /\*\*(.+?)\*\*|\[(\d+(?:\s*[,،]\s*\d+)*)\]/g;
   let last = 0;
@@ -916,7 +920,32 @@ function renderInline(text: string, kp: string): React.ReactNode[] {
     if (m[1] !== undefined) {
       out.push(<strong key={`${kp}-${k}`}>{m[1]}</strong>);
     } else if (m[2] !== undefined) {
-      out.push(<sup key={`${kp}-${k}`} className="yl-cite">[{m[2]}]</sup>);
+      const label = m[2];
+      const first = parseInt(label, 10);
+      out.push(
+        onCite && !isNaN(first) ? (
+          <sup
+            key={`${kp}-${k}`}
+            className="yl-cite yl-cite-link"
+            role="button"
+            tabIndex={0}
+            title="افتح المادة"
+            onClick={() => onCite(first)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onCite(first);
+              }
+            }}
+          >
+            [{label}]
+          </sup>
+        ) : (
+          <sup key={`${kp}-${k}`} className="yl-cite">
+            [{label}]
+          </sup>
+        ),
+      );
     }
     last = re.lastIndex;
     k++;
@@ -926,7 +955,13 @@ function renderInline(text: string, kp: string): React.ReactNode[] {
 }
 
 // عارض جواب المستشار: يحوّل Markdown الخفيف (غليظ/تنقيط/عزو) إلى تنسيق فعلي
-function RichAnswer({ text }: { text: string }) {
+function RichAnswer({
+  text,
+  onCite,
+}: {
+  text: string;
+  onCite?: (n: number) => void;
+}) {
   const lines = text.split("\n");
   return (
     <div className="yl-ans legal-text text-[1.02rem]">
@@ -936,7 +971,7 @@ function RichAnswer({ text }: { text: string }) {
         if (h) {
           return (
             <p key={i} className={`yl-ans-h yl-ans-h${h[1].length}`}>
-              {renderInline(h[2], `h${i}`)}
+              {renderInline(h[2], `h${i}`, onCite)}
             </p>
           );
         }
@@ -945,7 +980,7 @@ function RichAnswer({ text }: { text: string }) {
           return (
             <div key={i} className="yl-ans-bullet">
               <span>{ol[1]}.</span>
-              <span>{renderInline(ol[2], `o${i}`)}</span>
+              <span>{renderInline(ol[2], `o${i}`, onCite)}</span>
             </div>
           );
         }
@@ -954,11 +989,11 @@ function RichAnswer({ text }: { text: string }) {
           return (
             <div key={i} className="yl-ans-bullet">
               <span>•</span>
-              <span>{renderInline(ul[1], `u${i}`)}</span>
+              <span>{renderInline(ul[1], `u${i}`, onCite)}</span>
             </div>
           );
         }
-        return <p key={i}>{renderInline(line.trim(), `l${i}`)}</p>;
+        return <p key={i}>{renderInline(line.trim(), `l${i}`, onCite)}</p>;
       })}
     </div>
   );
@@ -1916,6 +1951,21 @@ function HomeScreen({
         <div className="yl-hero-sign">تطوير: يحيى الجديعي</div>
       </div>
 
+      {/* المستشار القانوني الذكي — مدخل بارز مستقلّ */}
+      <button onClick={onAsk} className="yl-chat-entry">
+        <span className="yl-chat-entry-avatar">⚖️</span>
+        <span className="yl-chat-entry-text">
+          <span className="yl-chat-entry-title">المستشار القانوني الذكي</span>
+          <span className="yl-chat-entry-sub">
+            اسأل أيّ سؤال قانوني — إجابة مؤسَّسة بالنصوص، قابلة للنسخ والتصدير
+            (Word / PDF).
+          </span>
+        </span>
+        <span className="yl-chat-entry-arrow" aria-hidden>
+          ←
+        </span>
+      </button>
+
       {/* بحث سريع */}
       <button
         onClick={onSearch}
@@ -1937,19 +1987,12 @@ function HomeScreen({
       </div>
 
       {/* أدوات إضافية */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Link href="/tools" className="yl-homecard">
           <span className="yl-homecard-icon">🧮</span>
           <span className="yl-homecard-title">الحاسبات</span>
           <span className="yl-homecard-sub">رسوم · مواعيد · مواريث · ديات</span>
         </Link>
-        <button onClick={onAsk} className="yl-homecard">
-          <span className="yl-homecard-icon">🤖</span>
-          <span className="yl-homecard-title">اسأل الذكاء</span>
-          <span className="yl-homecard-sub">
-            {apiKey ? "مُفعّل بمفتاحك" : "إجابات ذكية"}
-          </span>
-        </button>
         <Link href="/about" className="yl-homecard">
           <span className="yl-homecard-icon">ℹ️</span>
           <span className="yl-homecard-title">عن التطبيق</span>
@@ -1998,20 +2041,11 @@ export default function Home() {
   const [copiedMsg, setCopiedMsg] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  function copyMsg(i: number, text: string) {
-    try {
-      navigator.clipboard?.writeText(text);
-      setCopiedMsg(i);
-      setTimeout(() => setCopiedMsg((c) => (c === i ? null : c)), 1500);
-    } catch {
-      /* تجاهل */
-    }
-  }
 
-  // تصدير إجابة المستشار كمذكّرة قانونية PDF (بالسؤال والمصادر)
-  function exportChatAnswer(i: number) {
+  // يبني «مذكّرة قانونية» من إجابة المستشار (بالسؤال والمصادر) لأي مخرَج (PDF/Word/نسخ)
+  function chatDocFor(i: number): LegalDoc | null {
     const answer = nexusHistory[i]?.content;
-    if (!answer) return;
+    if (!answer) return null;
     const prev = nexusHistory[i - 1];
     const question = prev?.role === "user" ? prev.content : undefined;
     const cites: string[] = [];
@@ -2022,14 +2056,26 @@ export default function Home() {
         );
       for (const c of nexusCitations) if (c.source) cites.push(c.source);
     }
-    exportLegalPdf({
+    return {
       kind: "memo",
       title: "مذكرة قانونية",
       subtitle: "المستشار القانوني — تطبيق القوانين اليمنية",
       question,
       bodyText: answer,
       citations: Array.from(new Set(cites)),
-    });
+    };
+  }
+  async function copyChatRich(i: number) {
+    const d = chatDocFor(i);
+    if (d && (await copyLegalRich(d))) {
+      setCopiedMsg(i);
+      setTimeout(() => setCopiedMsg((c) => (c === i ? null : c)), 1500);
+    }
+  }
+  // نقر رقم العزو [n] في جواب المستشار → يفتح المادة المرتبطة
+  function openCitation(n: number) {
+    const s = sources[n - 1];
+    if (s && s.law_id) openRef(s.law_id, s.article_number ?? "");
   }
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
@@ -2420,7 +2466,9 @@ export default function Home() {
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    if (e.key !== "Enter" || e.shiftKey) return; // Shift+Enter = سطر جديد
+    // الدردشة: Enter يرسل (كـ ChatGPT). البحث: Ctrl/⌘+Enter فقط.
+    if (mode === "ask" || e.ctrlKey || e.metaKey) {
       e.preventDefault();
       run();
     }
@@ -2481,27 +2529,61 @@ export default function Home() {
           <JudgmentsBrowser />
         ) : (
           <>
-        {/* عنوان الوضع + رجوع للرئيسية */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold text-primary">
-            {mode === "ask" ? "💡 المستشار القانوني" : "🔎 البحث في القوانين"}
-          </h2>
-          <button
-            onClick={() => setMode(mode === "ask" ? "search" : "ask")}
-            className="text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-colors"
-          >
-            {mode === "ask" ? "التبديل إلى البحث" : "اسأل المستشار بدلاً من ذلك"}
-          </button>
-        </div>
-        {/* صندوق الإدخال: في الدردشة يلتصق بالأسفل تحت المحادثة (order-last) */}
-        <div
-          className={`bg-surface border border-border rounded-2xl p-3 shadow-sm ${
-            mode === "ask"
-              ? "order-last sticky bottom-16 z-20 shadow-lg mt-3"
-              : ""
-          }`}
-        >
-          {mode === "search" && (
+        {/* عنوان وضع البحث فقط (الدردشة لها لوحتها الخاصّة) */}
+        {mode === "search" && (
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-primary">
+              🔎 البحث في القوانين
+            </h2>
+            <button
+              onClick={() => setMode("ask")}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary hover:text-primary transition-colors"
+            >
+              💬 اسأل المستشار
+            </button>
+          </div>
+        )}
+        {/* الدردشة: مُؤلِّف رسائل عصري يلتصق بالأسفل */}
+        {mode === "ask" ? (
+          <div className="order-last sticky bottom-16 z-20 mt-3">
+            <div className="yl-composer">
+              <button
+                onClick={startVoice}
+                title="إدخال صوتي"
+                aria-label="إدخال صوتي"
+                className={`yl-composer-mic${listening ? " listening" : ""}`}
+              >
+                🎙
+              </button>
+              <textarea
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height =
+                    Math.min(e.target.scrollHeight, 140) + "px";
+                }}
+                onKeyDown={onKeyDown}
+                rows={1}
+                placeholder="اكتب سؤالك القانوني هنا…"
+                className="yl-composer-input"
+              />
+              <button
+                onClick={() => run()}
+                disabled={loading || !query.trim()}
+                className="yl-composer-send"
+                aria-label="إرسال"
+                title="إرسال"
+              >
+                {loading ? <span className="yl-spin" /> : <span aria-hidden>↑</span>}
+              </button>
+            </div>
+            <p className="text-center text-[11px] text-muted mt-1.5">
+              {listening ? "أتحدّث… تكلّم الآن" : "اضغط Enter للإرسال · Shift+Enter لسطر جديد"}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-2xl p-3 shadow-sm">
             <div
               className="inline-flex gap-1 rounded-xl border border-border bg-background p-1 mb-2"
               role="group"
@@ -2532,58 +2614,56 @@ export default function Home() {
                 بحث حرفي
               </button>
             </div>
-          )}
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onKeyDown}
-            rows={mode === "ask" ? 3 : 2}
-            placeholder={
-              mode === "search"
-                ? searchKind === "literal"
+            <textarea
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onKeyDown}
+              rows={2}
+              placeholder={
+                searchKind === "literal"
                   ? "ابحث عن لفظ أو عبارة مطابقة في نصوص المواد…"
                   : "ابحث بكلمة أو عبارة في نصوص المواد… (مثال: عقوبة السرقة)"
-                : "اسأل ويُجيبك فوراً بلا إنترنت… مثل: كم قيمة الهاشمة؟ · رسم دعوى بـ50 مليون · متى ميعاد الاستئناف؟"
-            }
-            className="w-full resize-none bg-transparent outline-none p-2 text-base placeholder:text-muted"
-          />
-          <div className="flex items-center justify-between mt-2 px-1">
-            <div className="flex items-center gap-2">
+              }
+              className="w-full resize-none bg-transparent outline-none p-2 text-base placeholder:text-muted"
+            />
+            <div className="flex items-center justify-between mt-2 px-1">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startVoice}
+                  title="بحث صوتي"
+                  aria-label="بحث صوتي"
+                  className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-colors ${
+                    listening
+                      ? "border-red-500 text-red-500 animate-pulse"
+                      : "border-border text-muted hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  🎙
+                </button>
+                <span className="text-xs text-muted">
+                  {listening ? "أتحدّث… تكلّم الآن" : "Ctrl + Enter للإرسال"}
+                </span>
+              </div>
               <button
-                onClick={startVoice}
-                title="بحث صوتي"
-                aria-label="بحث صوتي"
-                className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-colors ${
-                  listening
-                    ? "border-red-500 text-red-500 animate-pulse"
-                    : "border-border text-muted hover:border-primary hover:text-primary"
-                }`}
+                onClick={() => run()}
+                disabled={loading || !query.trim()}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-l from-primary-strong to-primary text-white font-medium shadow-sm hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                🎙
+                {loading ? (
+                  <>
+                    <span className="yl-spin" />
+                    جارٍ البحث…
+                  </>
+                ) : (
+                  <>
+                    بحث
+                    <span aria-hidden>↩</span>
+                  </>
+                )}
               </button>
-              <span className="text-xs text-muted">
-                {listening ? "أتحدّث… تكلّم الآن" : "Ctrl + Enter للإرسال"}
-              </span>
             </div>
-            <button
-              onClick={() => run()}
-              disabled={loading || !query.trim()}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-l from-primary-strong to-primary text-white font-medium shadow-sm hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {loading ? (
-                <>
-                  <span className="yl-spin" />
-                  {mode === "search" ? "جارٍ البحث…" : "يُجيب…"}
-                </>
-              ) : (
-                <>
-                  {mode === "search" ? "بحث" : "اسأل"}
-                  <span aria-hidden>↩</span>
-                </>
-              )}
-            </button>
           </div>
-        </div>
+        )}
 
         {error && (
           <div className="mt-4 p-4 rounded-xl border border-red-300 bg-red-50 text-red-800 text-sm dark:bg-red-950/40 dark:border-red-800 dark:text-red-200">
@@ -2594,23 +2674,29 @@ export default function Home() {
         {/* واجهة التشات: سجلّ المحادثة (يُحفظ محلياً) */}
         {mode === "ask" && nexusHistory.length > 0 && (
           <section className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-muted">
-                {aiMeta ? `🤖 ${aiMeta}` : "💡 المستشار القانوني"}
-              </span>
-              <button
-                onClick={() => {
-                  setNexusHistory([]);
-                  setHits(null);
-                  setSources([]);
-                  setAiMeta(null);
-                }}
-                className="text-xs text-muted hover:text-red-600"
-              >
-                🗑 مسح المحادثة
-              </button>
-            </div>
-            <div className="yl-chat">
+            <div className="yl-chatpanel">
+              <div className="yl-chatpanel-head">
+                <div className="yl-avatar">⚖️</div>
+                <div className="yl-chatpanel-id">
+                  <span className="yl-chatpanel-name">المستشار القانوني</span>
+                  <span className="yl-chatpanel-status">
+                    {aiMeta || "مستشارك القانوني الذكي — جاهز"}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setNexusHistory([]);
+                    setHits(null);
+                    setSources([]);
+                    setAiMeta(null);
+                  }}
+                  className="yl-chatpanel-clear"
+                  title="مسح المحادثة"
+                >
+                  🗑
+                </button>
+              </div>
+              <div className="yl-chat">
               {nexusHistory.map((m, i) =>
                 m.role === "user" ? (
                   <div key={i} className="yl-turn yl-turn-user">
@@ -2629,14 +2715,29 @@ export default function Home() {
                       <span className="yl-turn-name">المستشار القانوني</span>
                     </div>
                     <div className="yl-turn-body">
-                      <RichAnswer text={m.content} />
+                      <RichAnswer text={m.content} onCite={openCitation} />
                     </div>
                     <div className="yl-turn-actions">
-                      <button className="yl-act" onClick={() => copyMsg(i, m.content)}>
+                      <button className="yl-act" onClick={() => copyChatRich(i)}>
                         {copiedMsg === i ? "✓ نُسخ" : "⧉ نسخ"}
                       </button>
-                      <button className="yl-act" onClick={() => exportChatAnswer(i)}>
-                        ⬇ تصدير PDF
+                      <button
+                        className="yl-act"
+                        onClick={() => {
+                          const d = chatDocFor(i);
+                          if (d) downloadLegalWord(d);
+                        }}
+                      >
+                        ⬇ Word
+                      </button>
+                      <button
+                        className="yl-act"
+                        onClick={() => {
+                          const d = chatDocFor(i);
+                          if (d) exportLegalPdf(d);
+                        }}
+                      >
+                        ⬇ PDF
                       </button>
                     </div>
                   </div>
@@ -2663,12 +2764,13 @@ export default function Home() {
                     <span className="yl-turn-name">المستشار القانوني</span>
                   </div>
                   <div className="yl-turn-body">
-                    <RichAnswer text={streamText} />
+                    <RichAnswer text={streamText} onCite={openCitation} />
                     <span className="yl-caret" />
                   </div>
                 </div>
               )}
               <div ref={chatEndRef} />
+              </div>
             </div>
             {sources.length > 0 && (
               <div className="mt-3">
@@ -2935,9 +3037,7 @@ export default function Home() {
       <SiteFooter />
 
       <AppBottomNav
-        active={
-          mode === "ask" ? "search" : mode === "judgments" ? "browse" : mode
-        }
+        active={mode === "judgments" ? "browse" : mode}
         onNav={(s) => setMode(s)}
         onAi={() => setShowAi(true)}
       />

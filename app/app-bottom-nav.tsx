@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-type NavKey = "home" | "search" | "browse" | "tools" | "about";
+type NavKey = "home" | "search" | "ask" | "browse" | "tools" | "about";
 
 // شريط تنقّل سفلي موحّد لكل الصفحات.
 // في الصفحة الرئيسية يُمرَّر onNav لتبديل فوري بلا إعادة تحميل؛ وفي غيرها روابط.
@@ -13,7 +13,7 @@ export default function AppBottomNav({
   onAi,
 }: {
   active: NavKey;
-  onNav?: (screen: "home" | "search" | "browse") => void;
+  onNav?: (screen: "home" | "search" | "browse" | "ask") => void;
   onAi?: () => void;
 }) {
   const [more, setMore] = useState(false);
@@ -25,13 +25,14 @@ export default function AppBottomNav({
           [
             { k: "home", icon: "🏠", label: "الرئيسية", screen: "home" as const },
             { k: "search", icon: "🔎", label: "البحث", screen: "search" as const },
+            { k: "ask", icon: "💬", label: "المستشار", screen: "ask" as const },
             { k: "browse", icon: "📚", label: "المكتبة", screen: "browse" as const },
           ]
         ).map((it) =>
           onNav ? (
             <button
               key={it.k}
-              className={`yl-navbtn${active === it.k ? " active" : ""}`}
+              className={`yl-navbtn${active === it.k ? " active" : ""}${it.k === "ask" ? " yl-navbtn-ai" : ""}`}
               onClick={() => onNav(it.screen)}
             >
               <span className="yl-navicon">{it.icon}</span>
@@ -41,20 +42,13 @@ export default function AppBottomNav({
             <Link
               key={it.k}
               href={`/?screen=${it.screen}`}
-              className={`yl-navbtn${active === it.k ? " active" : ""}`}
+              className={`yl-navbtn${active === it.k ? " active" : ""}${it.k === "ask" ? " yl-navbtn-ai" : ""}`}
             >
               <span className="yl-navicon">{it.icon}</span>
               {it.label}
             </Link>
           ),
         )}
-        <Link
-          href="/tools"
-          className={`yl-navbtn${active === "tools" ? " active" : ""}`}
-        >
-          <span className="yl-navicon">🧮</span>
-          الحاسبات
-        </Link>
         <button
           className={`yl-navbtn${active === "about" || more ? " active" : ""}`}
           onClick={() => setMore(true)}
@@ -91,7 +85,7 @@ export default function AppBottomNav({
                   }}
                   className="w-full text-right px-3 py-2.5 rounded-lg hover:bg-primary/5 flex items-center gap-2"
                 >
-                  🤖 <span>الذكاء الاصطناعي</span>
+                  ⚙️ <span>إعدادات الذكاء (المفتاح والخادم)</span>
                 </button>
               )}
               <Link
