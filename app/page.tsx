@@ -1325,10 +1325,12 @@ function LawLibrary({
               : "border-border"
           }`}
         >
+          {label && (
+            <h3 className="text-xl font-extrabold text-primary leading-snug mb-2">
+              {label}
+            </h3>
+          )}
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            {label && (
-              <span className="text-sm font-bold text-primary">{label}</span>
-            )}
             {a.amend_status === "unrecognized" && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-red-600 text-white font-medium">
                 ⚠ تعديل بعد 2014
@@ -1530,7 +1532,7 @@ function LawLibrary({
                   <button
                     id={`sec-${g.key}`}
                     onClick={() => toggleGroup(g.key)}
-                    className="scroll-mt-4 w-full text-right flex items-start gap-2 pt-2 pb-1 px-1 text-sm font-bold text-accent leading-7 border-b border-accent/30"
+                    className="scroll-mt-4 w-full text-right flex items-start gap-2 pt-3 pb-1.5 px-1 text-base font-bold text-accent leading-7 border-b border-accent/30"
                   >
                     <span className="mt-0.5">{isCollapsed ? "▸" : "▾"}</span>
                     <span className="flex-1">{prettySection(g.section)}</span>

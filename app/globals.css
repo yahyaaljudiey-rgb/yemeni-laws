@@ -59,10 +59,12 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
   font-family: var(--font-amiri), var(--font-cairo), serif;
-  font-weight: 700;
-  font-size: 1.2rem;
-  line-height: 2.15;
+  font-weight: 400;
+  font-size: 1.05rem;
+  line-height: 1.95;
   letter-spacing: 0;
+  text-align: justify;
+  text-justify: inter-word;
 }
 
 /* ============ شاشة الترحيب المتحركة (ميزان العدل) ============ */
