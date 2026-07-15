@@ -17,7 +17,7 @@ import {
   clientLawArticles,
   normalizeAr,
 } from "@/lib/client-search";
-import { clientAsk } from "@/lib/client-ask";
+import { clientAsk, CLAUDE_MODELS, DEFAULT_CLAUDE_MODEL } from "@/lib/client-ask";
 import { asset } from "@/lib/base-path";
 import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/client-assistant";
 import { nexusChat, nexusChatStream, type NexusMessage, type NexusCitation } from "@/lib/nexus-client";
@@ -621,6 +621,7 @@ function ArticleOfDay({
 // لوحة إعداد الذكاء الاصطناعي بمفتاح المستخدم (BYOK) + دليل عربي
 function AiSettings({
   apiKey,
+  claudeModel,
   geminiKey,
   nexusUrl,
   nexusKey,
@@ -629,14 +630,16 @@ function AiSettings({
   onClose,
 }: {
   apiKey: string;
+  claudeModel: string;
   geminiKey: string;
   nexusUrl: string;
   nexusKey: string;
   userName: string;
-  onSave: (settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName: string }) => void;
+  onSave: (settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName: string; claudeModel: string }) => void;
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState(apiKey);
+  const [modelDraft, setModelDraft] = useState(claudeModel);
   const [geminiDraft, setGeminiDraft] = useState(geminiKey);
   const [nexusDraft, setNexusDraft] = useState(nexusUrl);
   const [nexusKeyDraft, setNexusKeyDraft] = useState(nexusKey);
@@ -779,12 +782,33 @@ function AiSettings({
                 🔒 يُحفظ على جهازك فقط (لا يُرسَل إلا إلى Claude عند طرح سؤال).
               </span>
             </div>
+
+            <div className="mt-3">
+              <label className="block text-xs font-bold text-muted mb-1.5">
+                نموذج Claude (يوازن القوّة والكلفة)
+              </label>
+              <select
+                value={modelDraft}
+                onChange={(e) => setModelDraft(e.target.value)}
+                className="w-full bg-background border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary transition-colors"
+              >
+                {CLAUDE_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted mt-1.5">
+                Haiku الأرخص (يمدّد الرصيد) · Opus الأقوى (الأغلى). يفيد عند
+                مشاركة مفتاح واحد.
+              </p>
+            </div>
           </div>}
 
           <div className="flex gap-2">
             <button
               onClick={() => {
-                onSave({ apiKey: draft, geminiKey: geminiDraft, nexusUrl: nexusDraft, nexusKey: nexusKeyDraft, userName: nameDraft });
+                onSave({ apiKey: draft, geminiKey: geminiDraft, nexusUrl: nexusDraft, nexusKey: nexusKeyDraft, userName: nameDraft, claudeModel: modelDraft });
                 onClose();
               }}
               disabled={!draft.trim() && !geminiDraft.trim() && !nexusDraft.trim()}
@@ -795,7 +819,7 @@ function AiSettings({
             {(apiKey || geminiKey || nexusUrl) && (
               <button
                 onClick={() => {
-                  onSave({ apiKey: "", geminiKey: "", nexusUrl: "", nexusKey: "", userName: nameDraft });
+                  onSave({ apiKey: "", geminiKey: "", nexusUrl: "", nexusKey: "", userName: nameDraft, claudeModel: modelDraft });
                   setDraft("");
                   setGeminiDraft("");
                   setNexusDraft("");
@@ -859,7 +883,7 @@ function AiSettings({
   );
 }
 
-type Mode = "home" | "search" | "ask" | "browse" | "judgments";
+type Mode = "home" | "search" | "ask" | "browse" | "judgments" | "commercial2010";
 type SearchKind = "smart" | "literal";
 
 interface LawMeta {
@@ -1658,7 +1682,7 @@ const CAT_ICON: Record<string, string> = {
   "إدارية": "🏛️", "شخصية": "👨‍👩‍👧", "دستورية": "📜",
 };
 
-function JudgmentsBrowser() {
+function JudgmentsBrowser({ onFullRulings }: { onFullRulings?: () => void }) {
   const [data, setData] = useState<JData | null>(null);
   const [cat, setCat] = useState<string>("");
   const [openColl, setOpenColl] = useState<string | null>(null);
@@ -1784,6 +1808,20 @@ function JudgmentsBrowser() {
         </span>
       </div>
       <p className="text-xs text-muted -mt-2">{data.source}</p>
+
+      {onFullRulings && (
+        <div className="inline-flex gap-1 rounded-xl border border-border bg-background p-1">
+          <span className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-white">
+            قواعد قضائية
+          </span>
+          <button
+            onClick={onFullRulings}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-primary transition-colors"
+          >
+            أحكام تجارية كاملة
+          </button>
+        </div>
+      )}
 
       <input
         value={q}
@@ -1916,6 +1954,173 @@ function JudgmentsBrowser() {
   );
 }
 
+// ——— نافذة الأحكام التجارية بنصّها الكامل (2010) — مستقلّة عن نافذة القواعد ———
+interface CRuling {
+  id: string; case: string; title: string; hijriDate: string; gregorianDate: string;
+  pageCount: number; subject: string; headings: string[]; text: string;
+}
+interface CData {
+  generatedAt: string; source: string; court: string; division: string;
+  year: number; totalRulings: number; totalPages: number; rulings: CRuling[];
+}
+
+function CommercialRulingsBrowser({ onRules }: { onRules?: () => void }) {
+  const [data, setData] = useState<CData | null>(null);
+  const [q, setQ] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(asset("/data/commercial-rulings-2010.json"))
+      .then((r) => r.json())
+      .then((d: CData) => setData(d))
+      .catch(() => {});
+  }, []);
+
+  // فهرس بحث مُطبَّع يُحسب مرّة واحدة (النصوص كبيرة — نتجنّب تطبيعها كلّ ضغطة)
+  const haystack = useMemo(
+    () =>
+      (data?.rulings ?? []).map((r) => ({
+        r,
+        hay: normalizeAr(`${r.case} ${r.subject} ${r.text}`),
+      })),
+    [data],
+  );
+
+  if (!data) {
+    return <p className="text-center text-muted py-10">جارٍ تحميل الأحكام التجارية…</p>;
+  }
+
+  const qn = normalizeAr(q.trim());
+  const shown = qn ? haystack.filter((h) => h.hay.includes(qn)).map((h) => h.r) : data.rulings;
+
+  function cite(r: CRuling) {
+    return [data!.court, data!.division, r.title]
+      .concat(r.gregorianDate ? `بتاريخ ${r.gregorianDate}م` : [])
+      .join("، ");
+  }
+
+  async function copyRuling(r: CRuling) {
+    const text = `${r.title}\n\n${r.text}\n\n— المصدر: ${cite(r)}.\nعبر تطبيق Yemeni Laws`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(r.id);
+      setTimeout(() => setCopiedKey((c) => (c === r.id ? null : c)), 2000);
+    } catch {
+      /* تجاهل */
+    }
+  }
+
+  function exportRulingP(r: CRuling) {
+    exportLegalPdf({
+      kind: "ruling",
+      title: "حكم تجاري — المحكمة العليا اليمنية",
+      subtitle: r.title,
+      meta: [
+        { label: "الدائرة", value: data!.division },
+        { label: "التاريخ", value: r.gregorianDate ? `${r.gregorianDate}م` : "" },
+        { label: "الموافق هجري", value: r.hijriDate ? `${r.hijriDate}هـ` : "" },
+        { label: "عدد الصفحات", value: String(r.pageCount) },
+      ],
+      bodyText: r.text,
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-base font-bold text-primary">💼 الأحكام التجارية الكاملة</h2>
+        <span className="text-xs text-muted">
+          {data.totalRulings} حكماً · {data.totalPages} صفحة · {data.year}
+        </span>
+      </div>
+      <p className="text-xs text-muted -mt-2">
+        {data.court} — {data.division}. سوابق بنصّها الكامل (منفصلة عن القواعد المختصرة).
+      </p>
+
+      {onRules && (
+        <div className="inline-flex gap-1 rounded-xl border border-border bg-background p-1">
+          <button
+            onClick={onRules}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-primary transition-colors"
+          >
+            قواعد قضائية
+          </button>
+          <span className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-white">
+            أحكام تجارية كاملة
+          </span>
+        </div>
+      )}
+
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="ابحث برقم الطعن أو في نصّ الحكم…"
+        className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary transition-colors"
+      />
+
+      <p className="text-xs text-muted">
+        {qn ? `${shown.length} نتيجة` : `${data.totalRulings} حكماً`}
+      </p>
+
+      {shown.length === 0 ? (
+        <div className="text-center text-muted py-10 text-sm">
+          لا توجد أحكام تطابق «{q.trim()}». جرّب رقم الطعن أو كلمةً من النصّ.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {shown.slice(0, 100).map((r) => {
+            const open = expanded === r.id;
+            return (
+              <div key={r.id} className="border border-border rounded-xl p-3 bg-surface shadow-sm">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted mb-1.5">
+                  <span className="text-accent font-medium">{r.title}</span>
+                  {r.gregorianDate && <span>{r.gregorianDate}م</span>}
+                  {r.hijriDate && <span>{r.hijriDate}هـ</span>}
+                  <span>{r.pageCount} صفحة</span>
+                </div>
+                {r.subject && <p className="legal-text text-[1.05rem]">{r.subject}</p>}
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <button
+                    onClick={() => setExpanded(open ? null : r.id)}
+                    className="text-xs text-primary font-medium hover:underline"
+                  >
+                    {open ? "▲ إخفاء النصّ الكامل" : "▼ عرض النصّ الكامل للحكم"}
+                  </button>
+                  <button
+                    onClick={() => copyRuling(r)}
+                    title="نسخ الحكم مع العزو"
+                    className="text-xs text-muted font-medium hover:text-primary"
+                  >
+                    {copiedKey === r.id ? "✓ تم النسخ" : "⧉ نسخ"}
+                  </button>
+                  <button
+                    onClick={() => exportRulingP(r)}
+                    title="تحميل الحكم كـ PDF"
+                    className="text-xs text-muted font-medium hover:text-primary"
+                  >
+                    ⬇ PDF
+                  </button>
+                </div>
+                {open && (
+                  <div className="legal-text mt-2 pr-3 border-r-2 border-gold whitespace-pre-wrap text-[1.02rem]">
+                    {r.text}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {shown.length > 100 && (
+            <p className="text-center text-xs text-muted py-3">
+              يُعرض أوّل 100 حكم — ضيّق البحث لعرض البقيّة.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ——— الشاشة الرئيسية: هيرو + بحث سريع + شبكة أقسام ———
 function HomeScreen({
   apiKey,
@@ -1923,12 +2128,14 @@ function HomeScreen({
   onSearch,
   onAsk,
   onJudgments,
+  onCommercial,
 }: {
   apiKey: string;
   onOpenWindow: (w: string) => void;
   onSearch: () => void;
   onAsk: () => void;
   onJudgments: () => void;
+  onCommercial: () => void;
 }) {
   const cards: {
     icon: string;
@@ -1939,7 +2146,8 @@ function HomeScreen({
     { icon: "📗", title: "القوانين", sub: "الدستور والقوانين", onClick: () => onOpenWindow("قانون") },
     { icon: "📘", title: "اللوائح", sub: "اللوائح التنظيمية", onClick: () => onOpenWindow("لائحة") },
     { icon: "🤝", title: "الاتفاقيات", sub: "الاتفاقيات والمواثيق", onClick: () => onOpenWindow("اتفاقية") },
-    { icon: "⚖️", title: "الأحكام القضائية", sub: "سوابق بنصّها الكامل", onClick: onJudgments },
+    { icon: "⚖️", title: "الأحكام القضائية", sub: "قواعد ومبادئ قضائية", onClick: onJudgments },
+    { icon: "💼", title: "الأحكام التجارية", sub: "سوابق 2010 بنصّها الكامل", onClick: onCommercial },
     { icon: "🏛️", title: "تعليمات النيابة", sub: "تعليمات وتعاميم", onClick: () => onOpenWindow("نيابة") },
   ];
   return (
@@ -2030,6 +2238,7 @@ export default function Home() {
   const [refArticle, setRefArticle] = useState<ArticleFull | null>(null);
   const [refLoading, setRefLoading] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [claudeModel, setClaudeModel] = useState<string>(DEFAULT_CLAUDE_MODEL);
   const [geminiKey, setGeminiKey] = useState("");
   const [userName, setUserName] = useState("");
   const [nexusUrl, setNexusUrl] = useState(DEFAULT_NEXUS_URL);
@@ -2109,6 +2318,8 @@ export default function Home() {
     try {
       const saved = localStorage.getItem("yl_claude_key");
       if (saved) setApiKey(saved);
+      const savedModel = localStorage.getItem("yl_claude_model");
+      if (savedModel) setClaudeModel(savedModel);
       // نستخدم !== null ليبقى الافتراضي للمستخدم الجديد، ويُحترم اختيار من غيّره (حتى الإفراغ)
       const savedNexus = localStorage.getItem("yl_nexus_url");
       if (savedNexus !== null) setNexusUrl(savedNexus);
@@ -2158,13 +2369,15 @@ export default function Home() {
     }
   }, [nexusHistory, streamText, thinking, mode]);
 
-  function saveAiSettings(settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName?: string }) {
+  function saveAiSettings(settings: { apiKey: string; geminiKey: string; nexusUrl: string; nexusKey: string; userName?: string; claudeModel?: string }) {
     const key = settings.apiKey.trim();
     const googleKey = settings.geminiKey.trim();
     const url = settings.nexusUrl.trim().replace(/\/+$/, "");
     const nKey = settings.nexusKey.trim();
     const name = (settings.userName ?? "").trim();
+    const cModel = settings.claudeModel || DEFAULT_CLAUDE_MODEL;
     setApiKey(key);
+    setClaudeModel(cModel);
     setGeminiKey(googleKey);
     setNexusUrl(url);
     setNexusKey(nKey);
@@ -2174,6 +2387,7 @@ export default function Home() {
     try {
       if (key) localStorage.setItem("yl_claude_key", key);
       else localStorage.removeItem("yl_claude_key");
+      localStorage.setItem("yl_claude_model", cModel);
       if (url) localStorage.setItem("yl_nexus_url", url);
       else localStorage.removeItem("yl_nexus_url");
       if (nKey) localStorage.setItem("yl_nexus_key", nKey);
@@ -2440,7 +2654,7 @@ export default function Home() {
           } else if (nexusUrl.trim()) {
             await streamFromNexus();
           } else if (apiKey.trim()) {
-            const data = await clientAsk(q, apiKey.trim());
+            const data = await clientAsk(q, apiKey.trim(), claudeModel);
             replyText = data.answer;
             setSources((data.sources as AskSource[]) || []);
           }
@@ -2514,6 +2728,7 @@ export default function Home() {
             onSearch={() => setMode("search")}
             onAsk={() => setMode("ask")}
             onJudgments={() => setMode("judgments")}
+            onCommercial={() => setMode("commercial2010")}
           />
         ) : mode === "browse" ? (
           <LawLibrary
@@ -2526,7 +2741,9 @@ export default function Home() {
             copiedId={copiedId}
           />
         ) : mode === "judgments" ? (
-          <JudgmentsBrowser />
+          <JudgmentsBrowser onFullRulings={() => setMode("commercial2010")} />
+        ) : mode === "commercial2010" ? (
+          <CommercialRulingsBrowser onRules={() => setMode("judgments")} />
         ) : (
           <>
         {/* عنوان وضع البحث فقط (الدردشة لها لوحتها الخاصّة) */}
@@ -3037,7 +3254,7 @@ export default function Home() {
       <SiteFooter />
 
       <AppBottomNav
-        active={mode === "judgments" ? "browse" : mode}
+        active={mode === "judgments" || mode === "commercial2010" ? "browse" : mode}
         onNav={(s) => setMode(s)}
         onAi={() => setShowAi(true)}
       />
@@ -3046,6 +3263,7 @@ export default function Home() {
       {showAi && (
         <AiSettings
           apiKey={apiKey}
+          claudeModel={claudeModel}
           geminiKey={geminiKey}
           nexusUrl={nexusUrl}
           nexusKey={nexusKey}

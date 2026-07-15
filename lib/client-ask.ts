@@ -4,7 +4,12 @@
 
 import { clientSearch, type ClientHit } from "./client-search";
 
-const MODEL = "claude-opus-4-8";
+export const CLAUDE_MODELS = [
+  { id: "claude-opus-4-8", label: "Opus 4.8 — الأقوى (الأغلى)" },
+  { id: "claude-sonnet-5", label: "Sonnet 5 — متوازن" },
+  { id: "claude-haiku-4-5", label: "Haiku 4.5 — الأسرع والأرخص" },
+] as const;
+export const DEFAULT_CLAUDE_MODEL = "claude-opus-4-8";
 
 export interface AskSource {
   article_id: number;
@@ -51,6 +56,7 @@ function buildContextBlock(articles: ClientHit[]): string {
 export async function clientAsk(
   question: string,
   apiKey: string,
+  model: string = DEFAULT_CLAUDE_MODEL,
   k = 8,
 ): Promise<AskResult> {
   const q = question.trim();
@@ -78,10 +84,12 @@ export async function clientAsk(
   const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
   const contextBlock = buildContextBlock(context);
 
+  // Haiku 4.5 لا يقبل thinking: adaptive (يُعطي خطأ)؛ نُفعّل التفكير لمن يدعمه فقط.
+  const supportsAdaptive = model !== "claude-haiku-4-5";
   const stream = client.messages.stream({
-    model: MODEL,
+    model,
     max_tokens: 2048,
-    thinking: { type: "adaptive" },
+    ...(supportsAdaptive ? { thinking: { type: "adaptive" as const } } : {}),
     system: SYSTEM_PROMPT,
     messages: [
       {
