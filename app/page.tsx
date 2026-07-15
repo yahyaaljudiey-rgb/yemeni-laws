@@ -2736,7 +2736,7 @@ export default function Home() {
           } else if (nexusUrl.trim()) {
             await streamFromNexus();
           } else if (apiKey.trim()) {
-            const data = await clientAsk(q, apiKey.trim(), claudeModel);
+            const data = await clientAsk(q, apiKey.trim(), claudeModel, appKnowledge());
             replyText = data.answer;
             setSources((data.sources as AskSource[]) || []);
           }

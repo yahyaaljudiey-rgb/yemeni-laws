@@ -57,6 +57,7 @@ export async function clientAsk(
   question: string,
   apiKey: string,
   model: string = DEFAULT_CLAUDE_MODEL,
+  knowledge?: string,
   k = 8,
 ): Promise<AskResult> {
   const q = question.trim();
@@ -70,7 +71,8 @@ export async function clientAsk(
 
   // 1) استرجاع المواد الأكثر صلة محلياً (نفس محرّك البحث الدلالي)
   const context = await clientSearch(q, Math.min(Math.max(k, 1), 15));
-  if (context.length === 0) {
+  // لا مواد؟ قد يكون سؤالاً عن التطبيق/الحاسبات/الميزات — نُجيب من «معرفة التطبيق».
+  if (context.length === 0 && !knowledge?.trim()) {
     return {
       answer:
         "لم أعثر على مواد قانونية تتّصل بسؤالك في المكتبة. الرجاء إعادة صياغة السؤال بكلمات أخرى.",
@@ -86,17 +88,19 @@ export async function clientAsk(
 
   // Haiku 4.5 لا يقبل thinking: adaptive (يُعطي خطأ)؛ نُفعّل التفكير لمن يدعمه فقط.
   const supportsAdaptive = model !== "claude-haiku-4-5";
+  // نضمّ «معرفة التطبيق» للنظام ليجيب أيضاً عن الحاسبات والميزات والمطوّرين ونطاق المحتوى.
+  const system = knowledge?.trim()
+    ? `${SYSTEM_PROMPT}\n\nإضافةً إلى المواد المرفقة، إليك معلومات موثوقة عن التطبيق نفسه (ميزاته وحاسباته ونطاقه ومعدّيه). استعِن بها للإجابة عن الأسئلة المتعلّقة بالتطبيق والحاسبات وكيفية الاستخدام والمحتوى المتاح:\n\n${knowledge.trim()}`
+    : SYSTEM_PROMPT;
+  const userContent = contextBlock
+    ? `المراجع (مواد قانونية يمنية):\n\n${contextBlock}\n\n---\n\nالسؤال: ${q}`
+    : `السؤال: ${q}`;
   const stream = client.messages.stream({
     model,
     max_tokens: 2048,
     ...(supportsAdaptive ? { thinking: { type: "adaptive" as const } } : {}),
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `المراجع (مواد قانونية يمنية):\n\n${contextBlock}\n\n---\n\nالسؤال: ${q}`,
-      },
-    ],
+    system,
+    messages: [{ role: "user", content: userContent }],
   });
 
   const message = await stream.finalMessage();
