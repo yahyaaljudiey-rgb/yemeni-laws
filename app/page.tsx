@@ -2694,15 +2694,16 @@ export default function Home() {
         // بثّ من النواة (يُستخدم مباشرةً أو كارتداد إن فشل Gemini)
         // نحقن سياق حاسبات التطبيق المحسوب محلياً (دية/رسوم/مواريث) في رسالة
         // النواة لتستند إليه — كما يفعل مسار Gemini تماماً.
-        const nexusMessages: NexusMessage[] = calculatorContext
-          ? [
-              ...history,
-              {
-                role: "user",
-                content: `${q}\n\n[معطيات محسوبة من حاسبات التطبيق — استند إليها في جوابك:\n${calculatorContext}]`,
-              },
-            ]
-          : [...history, userMsg];
+        const nexusExtra = [
+          calculatorContext
+            ? `[معطيات محسوبة من حاسبات التطبيق — استند إليها في جوابك:\n${calculatorContext}]`
+            : "",
+          `[معرفة التطبيق — استعِن بها للأسئلة عن التطبيق وحاسباته وميزاته ونطاقه:\n${appKnowledge()}]`,
+        ].filter(Boolean).join("\n\n");
+        const nexusMessages: NexusMessage[] = [
+          ...history,
+          { role: "user", content: `${q}\n\n${nexusExtra}` },
+        ];
         const streamFromNexus = async () => {
           let acc = "";
           const reply = await nexusChatStream(
@@ -2721,6 +2722,13 @@ export default function Home() {
           streamedLive = true;
         };
         try {
+          // الأولويّة: مفتاح المستخدم (Gemini ثمّ Claude) يسبق النواة المشتركة —
+          // فمن أدخل مفتاحه يريد استعماله، والنواة احتياطٌ لمن بلا مفتاح.
+          const askClaude = async () => {
+            const data = await clientAsk(q, apiKey.trim(), claudeModel, appKnowledge());
+            replyText = data.answer;
+            setSources((data.sources as AskSource[]) || []);
+          };
           if (geminiKey.trim()) {
             try {
               const reply = await geminiChat(
@@ -2729,16 +2737,15 @@ export default function Home() {
               replyText = reply.content;
               model = reply.model;
             } catch (gErr) {
-              // فشل Gemini (مثل نفاد الحصة) → ارتدّ للنواة إن توفّرت
-              if (nexusUrl.trim()) await streamFromNexus();
+              // فشل Gemini (نفاد الحصة مثلاً) → Claude إن وُجد، وإلا النواة
+              if (apiKey.trim()) await askClaude();
+              else if (nexusUrl.trim()) await streamFromNexus();
               else throw gErr;
             }
+          } else if (apiKey.trim()) {
+            await askClaude();
           } else if (nexusUrl.trim()) {
             await streamFromNexus();
-          } else if (apiKey.trim()) {
-            const data = await clientAsk(q, apiKey.trim(), claudeModel, appKnowledge());
-            replyText = data.answer;
-            setSources((data.sources as AskSource[]) || []);
           }
         } catch (aiErr) {
           replyText =
