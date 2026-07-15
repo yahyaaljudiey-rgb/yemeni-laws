@@ -172,6 +172,27 @@ function linkifyRefs(
   return nodes;
 }
 
+// إصلاح أسطر مقطوعة في غير موضعها (أثر استخراج النصّ): رمز ترقيم مفرد على سطر
+// مستقلّ (نقطة/فاصلة/قوس مغلق) يُلصَق بنهاية السطر السابق، والقوس المفتوح المفرد
+// ببداية السطر التالي — دون المساس بعلامات التعديل ((( ))) (طولها ≥ 3).
+const TRAIL_PUNC = new Set([".", "،", "؛", ":", ")"]);
+function tidyArticleText(content: string): string {
+  if (!content || !content.includes("\n")) return content;
+  const lines = content.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (t.length === 1 && TRAIL_PUNC.has(t) && out.length) {
+      out[out.length - 1] = out[out.length - 1].replace(/\s+$/, "") + t;
+    } else if (t === "(" && i + 1 < lines.length) {
+      lines[i + 1] = "(" + lines[i + 1].replace(/^\s+/, "");
+    } else {
+      out.push(lines[i]);
+    }
+  }
+  return out.join("\n");
+}
+
 // عرض نص المادة مع تلوين أجزاء التعديل ((( ... ))) بالأحمر وربط الإحالات
 function ArticleText({
   content,
@@ -182,7 +203,7 @@ function ArticleText({
   lawId?: number;
   onRef?: (lawId: number, num: string) => void;
 }) {
-  const segments = segmentAmendments(content);
+  const segments = segmentAmendments(tidyArticleText(content));
   const canLink = lawId != null && onRef != null;
   return (
     <>
@@ -255,7 +276,7 @@ interface SpeechRecognitionLike {
 
 // إزالة علامات التعديل ((( ))) من النص قبل القراءة الصوتية
 function plainArticleText(content: string): string {
-  return content.replace(/\({3,}/g, "").replace(/\){3,}/g, "").trim();
+  return tidyArticleText(content).replace(/\({3,}/g, "").replace(/\){3,}/g, "").trim();
 }
 
 interface AskSource {
