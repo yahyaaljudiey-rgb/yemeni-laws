@@ -1983,70 +1983,86 @@ function JudgmentsBrowser({ onFullRulings }: { onFullRulings?: () => void }) {
   );
 }
 
-// ——— نافذة الأحكام التجارية بنصّها الكامل (2010) — مستقلّة عن نافذة القواعد ———
-interface CRuling {
+// ——— نافذة الأحكام بنصّها الكامل: الدائرة ← السنة ← الحكم (مستقلّة عن القواعد) ———
+interface FRuling {
   id: string; case: string; title: string; hijriDate: string; gregorianDate: string;
-  pageCount: number; subject: string; headings: string[]; text: string;
+  pageCount: number; subject: string; text: string;
 }
-interface CData {
-  generatedAt: string; source: string; court: string; division: string;
-  year: number; totalRulings: number; totalPages: number; rulings: CRuling[];
+interface FYearEntry { year: number; count: number; pages: number; file: string; }
+interface FDivision { key: string; name: string; total: number; years: FYearEntry[]; }
+interface FIndex { divisions: FDivision[]; }
+interface FYearData {
+  divisionKey: string; division: string; year: number; court: string;
+  totalRulings: number; totalPages: number; rulings: FRuling[];
 }
 
-function CommercialRulingsBrowser({ onRules }: { onRules?: () => void }) {
-  const [data, setData] = useState<CData | null>(null);
+function FullRulingsBrowser({ onRules }: { onRules?: () => void }) {
+  const [index, setIndex] = useState<FIndex | null>(null);
+  const [divKey, setDivKey] = useState("");
+  const [year, setYear] = useState<number | null>(null);
+  const [yearData, setYearData] = useState<FYearData | null>(null);
+  const [loadingYear, setLoadingYear] = useState(false);
   const [q, setQ] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(asset("/data/commercial-rulings-2010.json"))
+    fetch(asset("/data/full-rulings-index.json"))
       .then((r) => r.json())
-      .then((d: CData) => setData(d))
+      .then((d: FIndex) => { setIndex(d); setDivKey(d.divisions[0]?.key ?? ""); })
       .catch(() => {});
   }, []);
 
-  // فهرس بحث مُطبَّع يُحسب مرّة واحدة (النصوص كبيرة — نتجنّب تطبيعها كلّ ضغطة)
+  const div = index?.divisions.find((d) => d.key === divKey) ?? index?.divisions[0] ?? null;
+
+  // تحميل ملفّ السنة المختارة كسولًا (لا يُحمَّل إلا ما يُفتَح)
+  useEffect(() => {
+    if (year == null || !div) { setYearData(null); return; }
+    const ye = div.years.find((y) => y.year === year);
+    if (!ye) return;
+    setLoadingYear(true); setYearData(null); setQ(""); setExpanded(null);
+    fetch(asset("/data/" + ye.file))
+      .then((r) => r.json())
+      .then((d: FYearData) => setYearData(d))
+      .catch(() => {})
+      .finally(() => setLoadingYear(false));
+  }, [year, div]);
+
   const haystack = useMemo(
-    () =>
-      (data?.rulings ?? []).map((r) => ({
-        r,
-        hay: normalizeAr(`${r.case} ${r.subject} ${r.text}`),
-      })),
-    [data],
+    () => (yearData?.rulings ?? []).map((r) => ({
+      r, hay: normalizeAr(`${r.case} ${r.subject} ${r.text}`),
+    })),
+    [yearData],
   );
 
-  if (!data) {
-    return <p className="text-center text-muted py-10">جارٍ تحميل الأحكام التجارية…</p>;
+  if (!index || !div) {
+    return <p className="text-center text-muted py-10">جارٍ تحميل الأحكام…</p>;
   }
 
   const qn = normalizeAr(q.trim());
-  const shown = qn ? haystack.filter((h) => h.hay.includes(qn)).map((h) => h.r) : data.rulings;
+  const shown = qn ? haystack.filter((h) => h.hay.includes(qn)).map((h) => h.r) : (yearData?.rulings ?? []);
+  const divName = div.name;
 
-  function cite(r: CRuling) {
-    return [data!.court, data!.division, r.title]
+  function cite(r: FRuling) {
+    return ["المحكمة العليا اليمنية", `الدائرة ${divName}`, r.title]
       .concat(r.gregorianDate ? `بتاريخ ${r.gregorianDate}م` : [])
       .join("، ");
   }
-
-  async function copyRuling(r: CRuling) {
+  async function copyRuling(r: FRuling) {
     const text = `${r.title}\n\n${r.text}\n\n— المصدر: ${cite(r)}.\nعبر تطبيق Yemeni Laws`;
     try {
       await navigator.clipboard.writeText(text);
       setCopiedKey(r.id);
       setTimeout(() => setCopiedKey((c) => (c === r.id ? null : c)), 2000);
-    } catch {
-      /* تجاهل */
-    }
+    } catch { /* تجاهل */ }
   }
-
-  function exportRulingP(r: CRuling) {
+  function exportRulingP(r: FRuling) {
     exportLegalPdf({
       kind: "ruling",
-      title: "حكم تجاري — المحكمة العليا اليمنية",
+      title: `حكم ${divName} — المحكمة العليا اليمنية`,
       subtitle: r.title,
       meta: [
-        { label: "الدائرة", value: data!.division },
+        { label: "الدائرة", value: divName },
         { label: "التاريخ", value: r.gregorianDate ? `${r.gregorianDate}م` : "" },
         { label: "الموافق هجري", value: r.hijriDate ? `${r.hijriDate}هـ` : "" },
         { label: "عدد الصفحات", value: String(r.pageCount) },
@@ -2058,13 +2074,11 @@ function CommercialRulingsBrowser({ onRules }: { onRules?: () => void }) {
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-base font-bold text-primary">💼 الأحكام التجارية الكاملة</h2>
-        <span className="text-xs text-muted">
-          {data.totalRulings} حكماً · {data.totalPages} صفحة · {data.year}
-        </span>
+        <h2 className="text-base font-bold text-primary">💼 الأحكام بنصّها الكامل</h2>
+        <span className="text-xs text-muted">{div.total} حكماً · {div.years.length} سنوات</span>
       </div>
       <p className="text-xs text-muted -mt-2">
-        {data.court} — {data.division}. سوابق بنصّها الكامل (منفصلة عن القواعد المختصرة).
+        المحكمة العليا اليمنية — الدائرة {divName}. سوابق بنصّها الكامل (منفصلة عن القواعد المختصرة).
       </p>
 
       {onRules && (
@@ -2076,75 +2090,114 @@ function CommercialRulingsBrowser({ onRules }: { onRules?: () => void }) {
             قواعد قضائية
           </button>
           <span className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-white">
-            أحكام تجارية كاملة
+            أحكام بنصّها الكامل
           </span>
         </div>
       )}
 
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="ابحث برقم الطعن أو في نصّ الحكم…"
-        className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary transition-colors"
-      />
+      {index.divisions.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {index.divisions.map((d) => (
+            <button
+              key={d.key}
+              onClick={() => { setDivKey(d.key); setYear(null); }}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                d.key === divKey ? "bg-primary text-white" : "bg-surface border border-border text-muted hover:border-primary"
+              }`}
+            >
+              {d.name} <span className="text-[10px] opacity-70">({d.total})</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      <p className="text-xs text-muted">
-        {qn ? `${shown.length} نتيجة` : `${data.totalRulings} حكماً`}
-      </p>
-
-      {shown.length === 0 ? (
-        <div className="text-center text-muted py-10 text-sm">
-          لا توجد أحكام تطابق «{q.trim()}». جرّب رقم الطعن أو كلمةً من النصّ.
+      {year == null ? (
+        <div>
+          <p className="text-xs text-muted mb-2">اختر السنة لتصفّح أحكامها:</p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {[...div.years].sort((a, b) => b.year - a.year).map((y) => (
+              <button
+                key={y.year}
+                onClick={() => setYear(y.year)}
+                className="flex flex-col items-center gap-0.5 rounded-xl border border-border bg-surface py-3 hover:border-primary hover:bg-primary/5 transition-colors shadow-sm"
+              >
+                <span className="text-lg font-extrabold text-primary">{y.year}</span>
+                <span className="text-[11px] text-muted">{y.count} حكماً</span>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="space-y-2">
-          {shown.slice(0, 100).map((r) => {
-            const open = expanded === r.id;
-            return (
-              <div key={r.id} className="border border-border rounded-xl p-3 bg-surface shadow-sm">
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted mb-1.5">
-                  <span className="text-accent font-medium">{r.title}</span>
-                  {r.gregorianDate && <span>{r.gregorianDate}م</span>}
-                  {r.hijriDate && <span>{r.hijriDate}هـ</span>}
-                  <span>{r.pageCount} صفحة</span>
+        <>
+          <button
+            onClick={() => { setYear(null); setQ(""); }}
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            ▸ رجوع إلى السنوات
+          </button>
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-base font-bold text-accent">أحكام {divName} — {year}</h3>
+            {yearData && (
+              <span className="text-xs text-muted">{yearData.totalRulings} حكماً · {yearData.totalPages} صفحة</span>
+            )}
+          </div>
+
+          {loadingYear && <p className="text-center text-muted py-10">جارٍ تحميل أحكام {year}…</p>}
+
+          {yearData && (
+            <>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="ابحث برقم الطعن أو في نصّ الحكم…"
+                className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 outline-none focus:border-primary transition-colors"
+              />
+              <p className="text-xs text-muted">{qn ? `${shown.length} نتيجة` : `${yearData.totalRulings} حكماً`}</p>
+
+              {shown.length === 0 ? (
+                <div className="text-center text-muted py-10 text-sm">
+                  لا توجد أحكام تطابق «{q.trim()}». جرّب رقم الطعن أو كلمةً من النصّ.
                 </div>
-                {r.subject && <p className="legal-text text-[1.05rem]">{r.subject}</p>}
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                  <button
-                    onClick={() => setExpanded(open ? null : r.id)}
-                    className="text-xs text-primary font-medium hover:underline"
-                  >
-                    {open ? "▲ إخفاء النصّ الكامل" : "▼ عرض النصّ الكامل للحكم"}
-                  </button>
-                  <button
-                    onClick={() => copyRuling(r)}
-                    title="نسخ الحكم مع العزو"
-                    className="text-xs text-muted font-medium hover:text-primary"
-                  >
-                    {copiedKey === r.id ? "✓ تم النسخ" : "⧉ نسخ"}
-                  </button>
-                  <button
-                    onClick={() => exportRulingP(r)}
-                    title="تحميل الحكم كـ PDF"
-                    className="text-xs text-muted font-medium hover:text-primary"
-                  >
-                    ⬇ PDF
-                  </button>
+              ) : (
+                <div className="space-y-2">
+                  {shown.slice(0, 100).map((r) => {
+                    const open = expanded === r.id;
+                    return (
+                      <div key={r.id} className="border border-border rounded-xl p-3 bg-surface shadow-sm">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted mb-1.5">
+                          <span className="text-accent font-medium">{r.title}</span>
+                          {r.gregorianDate && <span>{r.gregorianDate}م</span>}
+                          {r.hijriDate && <span>{r.hijriDate}هـ</span>}
+                          <span>{r.pageCount} صفحة</span>
+                        </div>
+                        {r.subject && <p className="legal-text text-[1.05rem]">{r.subject}</p>}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <button onClick={() => setExpanded(open ? null : r.id)} className="text-xs text-primary font-medium hover:underline">
+                            {open ? "▲ إخفاء النصّ الكامل" : "▼ عرض النصّ الكامل للحكم"}
+                          </button>
+                          <button onClick={() => copyRuling(r)} title="نسخ الحكم مع العزو" className="text-xs text-muted font-medium hover:text-primary">
+                            {copiedKey === r.id ? "✓ تم النسخ" : "⧉ نسخ"}
+                          </button>
+                          <button onClick={() => exportRulingP(r)} title="تحميل الحكم كـ PDF" className="text-xs text-muted font-medium hover:text-primary">
+                            ⬇ PDF
+                          </button>
+                        </div>
+                        {open && (
+                          <div className="legal-text mt-2 pr-3 border-r-2 border-gold whitespace-pre-wrap text-[1.02rem]">
+                            {r.text}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {shown.length > 100 && (
+                    <p className="text-center text-xs text-muted py-3">يُعرض أوّل 100 حكم — ضيّق البحث لعرض البقيّة.</p>
+                  )}
                 </div>
-                {open && (
-                  <div className="legal-text mt-2 pr-3 border-r-2 border-gold whitespace-pre-wrap text-[1.02rem]">
-                    {r.text}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {shown.length > 100 && (
-            <p className="text-center text-xs text-muted py-3">
-              يُعرض أوّل 100 حكم — ضيّق البحث لعرض البقيّة.
-            </p>
+              )}
+            </>
           )}
-        </div>
+        </>
       )}
     </div>
   );
@@ -2176,7 +2229,7 @@ function HomeScreen({
     { icon: "📘", title: "اللوائح", sub: "اللوائح التنظيمية", onClick: () => onOpenWindow("لائحة") },
     { icon: "🤝", title: "الاتفاقيات", sub: "الاتفاقيات والمواثيق", onClick: () => onOpenWindow("اتفاقية") },
     { icon: "⚖️", title: "الأحكام القضائية", sub: "قواعد ومبادئ قضائية", onClick: onJudgments },
-    { icon: "💼", title: "الأحكام التجارية", sub: "سوابق 2010 بنصّها الكامل", onClick: onCommercial },
+    { icon: "💼", title: "الأحكام التجارية", sub: "سوابق 2006–2014 بنصّها الكامل", onClick: onCommercial },
     { icon: "🏛️", title: "تعليمات النيابة", sub: "تعليمات وتعاميم", onClick: () => onOpenWindow("نيابة") },
   ];
   return (
@@ -2772,7 +2825,7 @@ export default function Home() {
         ) : mode === "judgments" ? (
           <JudgmentsBrowser onFullRulings={() => setMode("commercial2010")} />
         ) : mode === "commercial2010" ? (
-          <CommercialRulingsBrowser onRules={() => setMode("judgments")} />
+          <FullRulingsBrowser onRules={() => setMode("judgments")} />
         ) : (
           <>
         {/* عنوان وضع البحث فقط (الدردشة لها لوحتها الخاصّة) */}
