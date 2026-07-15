@@ -175,9 +175,15 @@ function linkifyRefs(
 // إصلاح أسطر مقطوعة في غير موضعها (أثر استخراج النصّ): رمز ترقيم مفرد على سطر
 // مستقلّ (نقطة/فاصلة/قوس مغلق) يُلصَق بنهاية السطر السابق، والقوس المفتوح المفرد
 // ببداية السطر التالي — دون المساس بعلامات التعديل ((( ))) (طولها ≥ 3).
+// علامة فقرة بشكل الشرطة: حرف عربي مفرد + شرطة + مسافة (أ- ب- ج-…). الإحالات
+// تأتي بين قوسين «(أ)» فلا تتطابق، فالكسر هنا آمن على الإحالات.
+const PARA_MARK = /(\S)[ \t]+((?:[أ-ي]|هـ)[ \t]?[-‐][ \t])/g;
 const TRAIL_PUNC = new Set([".", "،", "؛", ":", ")"]);
 function tidyArticleText(content: string): string {
-  if (!content || !content.includes("\n")) return content;
+  if (!content) return content;
+  // 1) كل فقرة (أ- ب- ج-…) تظهر وسط السطر → تبدأ بسطر مستقلّ لتكون أوضح.
+  content = content.replace(PARA_MARK, "$1\n$2");
+  if (!content.includes("\n")) return content;
   const lines = content.split("\n");
   const out: string[] = [];
   for (let i = 0; i < lines.length; i++) {
