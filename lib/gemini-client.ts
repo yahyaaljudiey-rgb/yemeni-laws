@@ -85,9 +85,12 @@ export async function geminiChat(
   calculatorContext?: string,
   appKnowledge?: string,
   userName?: string,
+  proxyUrl?: string,
 ): Promise<GeminiReply> {
   const key = apiKey.trim();
-  if (!key) throw new Error("مفتاح Gemini غير موجود");
+  // وضع الوسيط المشترك: بلا مفتاح شخصيّ، نمرّر عبر خادم يحمل المفتاح ويضيف الأمان.
+  const useProxy = !key && !!proxyUrl?.trim();
+  if (!key && !useProxy) throw new Error("مفتاح Gemini غير موجود");
   const system =
     SYSTEM +
     (userName?.trim()
@@ -109,20 +112,21 @@ export async function geminiChat(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 90_000);
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": key,
-        },
-        body: JSON.stringify({
+    // الوسيط: نرسل contents + النظام فقط (الوسيط يضيف المفتاح والأمان والإعداد).
+    // المباشر: نرسل كل شيء لـGoogle بمفتاح المستخدم.
+    const url = useProxy
+      ? proxyUrl!.trim()
+      : `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+    const headers: Record<string, string> = useProxy
+      ? { "Content-Type": "application/json" }
+      : { "Content-Type": "application/json", "x-goog-api-key": key };
+    const payload = useProxy
+      ? { systemInstruction: { parts: [{ text: system }] }, contents }
+      : {
           systemInstruction: { parts: [{ text: system }] },
           contents,
-          // تطبيق مرجعيّ قانونيّ: القانون الجنائيّ يتناول مواضيع حسّاسة (جرائم
-          // جنسيّة/عنف). فلاتر الأمان الافتراضيّة تحجب هذه فتُرجع جواباً فارغاً،
-          // فنُعطّلها ليُجيب عن نصوص القوانين كما هي (شرح استرشاديّ لا ترويج).
+          // تطبيق مرجعيّ قانونيّ: مواضيع حسّاسة (جرائم جنسيّة/عنف) تحجبها فلاتر
+          // الأمان الافتراضيّة فتُرجع جواباً فارغاً؛ نُعطّلها لشرح النصوص كما هي.
           safetySettings: [
             "HARM_CATEGORY_HARASSMENT",
             "HARM_CATEGORY_HATE_SPEECH",
@@ -130,13 +134,14 @@ export async function geminiChat(
             "HARM_CATEGORY_DANGEROUS_CONTENT",
             "HARM_CATEGORY_CIVIC_INTEGRITY",
           ].map((category) => ({ category, threshold: "BLOCK_NONE" })),
-          // gemini-2.5-flash موديل «تفكير»: مع سياق قانوني كبير قد يستهلك التفكيرُ
-          // الميزانية فيعود الردّ فارغاً. نرفع الحدّ لضمان بقاء نصّ الإجابة.
           generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
-        }),
-        signal: controller.signal,
-      },
-    );
+        };
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
     const data = await response.json().catch(() => null) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       error?: { message?: string };

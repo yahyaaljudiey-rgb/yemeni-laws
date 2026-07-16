@@ -37,6 +37,11 @@ const DEFAULT_NEXUS_KEY =
 const FEEDBACK_URL =
   process.env.NEXT_PUBLIC_FEEDBACK_URL || "https://yl-feedback.vercel.app";
 
+// وسيط الذكاء المشترك (serverless على Vercel): شات ذكيّ بلا مفتاح للزملاء —
+// الاسترجاع محليّ والوسيط يحمل مفتاح Gemini خادميًّا. بديل خفيف عن نواة VPS.
+const SHARED_AI_URL =
+  process.env.NEXT_PUBLIC_AI_PROXY_URL || `${FEEDBACK_URL}/api/ai`;
+
 interface CommunityItem {
   q: string;
   count?: number;
@@ -2735,6 +2740,14 @@ export default function Home() {
             replyText = data.answer;
             setSources((data.sources as AskSource[]) || []);
           };
+          // الوسيط المشترك (بلا مفتاح): نفس تأصيل Gemini، لكن عبر خادم يحمل المفتاح.
+          const askSharedProxy = async () => {
+            const reply = await geminiChat(
+              "", [...history, userMsg], hits, calculatorContext, appKnowledge(), userName, SHARED_AI_URL,
+            );
+            replyText = reply.content;
+            model = reply.model;
+          };
           if (geminiKey.trim()) {
             try {
               const reply = await geminiChat(
@@ -2743,15 +2756,20 @@ export default function Home() {
               replyText = reply.content;
               model = reply.model;
             } catch (gErr) {
-              // فشل Gemini (نفاد الحصة مثلاً) → Claude إن وُجد، وإلا النواة
+              // فشل مفتاح المستخدم → Claude إن وُجد، وإلا الوسيط المشترك
               if (apiKey.trim()) await askClaude();
-              else if (nexusUrl.trim()) await streamFromNexus();
-              else throw gErr;
+              else await askSharedProxy();
             }
           } else if (apiKey.trim()) {
             await askClaude();
-          } else if (nexusUrl.trim()) {
-            await streamFromNexus();
+          } else {
+            // الافتراضي للزملاء: الوسيط المشترك بلا إعداد. النواة القديمة احتياط أخير.
+            try {
+              await askSharedProxy();
+            } catch (pErr) {
+              if (nexusUrl.trim()) await streamFromNexus();
+              else throw pErr;
+            }
           }
         } catch (aiErr) {
           replyText =
