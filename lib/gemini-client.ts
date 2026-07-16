@@ -47,6 +47,13 @@ export async function geminiExpandQuery(
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
+          safetySettings: [
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "HARM_CATEGORY_CIVIC_INTEGRITY",
+          ].map((category) => ({ category, threshold: "BLOCK_NONE" })),
           generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
         }),
         signal: controller.signal,
@@ -111,6 +118,16 @@ export async function geminiChat(
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents,
+          // تطبيق مرجعيّ قانونيّ: القانون الجنائيّ يتناول مواضيع حسّاسة (جرائم
+          // جنسيّة/عنف). فلاتر الأمان الافتراضيّة تحجب هذه فتُرجع جواباً فارغاً،
+          // فنُعطّلها ليُجيب عن نصوص القوانين كما هي (شرح استرشاديّ لا ترويج).
+          safetySettings: [
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "HARM_CATEGORY_CIVIC_INTEGRITY",
+          ].map((category) => ({ category, threshold: "BLOCK_NONE" })),
           // gemini-2.5-flash موديل «تفكير»: مع سياق قانوني كبير قد يستهلك التفكيرُ
           // الميزانية فيعود الردّ فارغاً. نرفع الحدّ لضمان بقاء نصّ الإجابة.
           generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
