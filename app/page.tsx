@@ -2363,10 +2363,16 @@ export default function Home() {
       setTimeout(() => setCopiedMsg((c) => (c === i ? null : c)), 1500);
     }
   }
-  // نقر رقم العزو [n] في جواب المستشار → يفتح المادة المرتبطة
+  // نقر رقم العزو [n] في جواب المستشار → يفتح المادة المرتبطة (BYOK)،
+  // أو يبحث في القانون المستشهَد به (مسار النواة).
   function openCitation(n: number) {
     const s = sources[n - 1];
-    if (s && s.law_id) openRef(s.law_id, s.article_number ?? "");
+    if (s && s.law_id) {
+      openRef(s.law_id, s.article_number ?? "");
+      return;
+    }
+    const c = nexusCitations[n - 1];
+    if (c && c.source) run(c.source.split(" - ")[0].trim(), "search");
   }
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
@@ -3078,26 +3084,40 @@ export default function Home() {
               <div ref={chatEndRef} />
               </div>
             </div>
-            {sources.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs text-muted mb-1.5">
-                  📎 المواد المرتبطة (اضغط لفتح المادة):
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {sources.map((s) => (
-                    <button
-                      key={s.article_id}
-                      onClick={() => openRef(s.law_id, s.article_number ?? "")}
-                      title="افتح نصّ المادة"
-                      className="text-xs px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-white transition-colors"
-                    >
-                      {s.law_title}
-                      {s.article_number ? ` — مادة (${s.article_number})` : ""}
-                    </button>
-                  ))}
+            {sources.length > 0 && (() => {
+              // نعرض المواد التي استشهد بها الجواب فعلاً فقط (أرقام [n])، لا كل
+              // نتائج البحث — تفادياً لظهور مواد غير متّصلة بالسؤال.
+              const lastAns =
+                [...nexusHistory].reverse().find((m) => m.role === "assistant")?.content ??
+                streamText ?? "";
+              const cited = new Set(
+                [...lastAns.matchAll(/\[(\d+(?:\s*[,،]\s*\d+)*)\]/g)]
+                  .flatMap((m) => m[1].split(/[,،]/).map((x) => parseInt(x.trim(), 10)))
+                  .filter((n) => !isNaN(n)),
+              );
+              const shown = cited.size ? sources.filter((_, i) => cited.has(i + 1)) : [];
+              if (shown.length === 0) return null;
+              return (
+                <div className="mt-3">
+                  <p className="text-xs text-muted mb-1.5">
+                    📎 المواد المستشهَد بها (اضغط لفتح المادة):
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {shown.map((s) => (
+                      <button
+                        key={s.article_id}
+                        onClick={() => openRef(s.law_id, s.article_number ?? "")}
+                        title="افتح نصّ المادة"
+                        className="text-xs px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-white transition-colors"
+                      >
+                        {s.law_title}
+                        {s.article_number ? ` — مادة (${s.article_number})` : ""}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {nexusCitations.length > 0 && (
               <div className="mt-3">
                 <p className="text-xs text-muted mb-1.5">
