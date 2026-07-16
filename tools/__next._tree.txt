@@ -1,0 +1,8 @@
+:HL["/yemeni-laws/_next/static/chunks/3w2cuu6-u91r8.css","style"]
+:HL["/yemeni-laws/_next/static/media/05d29f0ed5b0e698-s.p.1mou8v493x-u7.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/yemeni-laws/_next/static/media/1062333f2bd32cfe-s.p.1u_72eqgml40c.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/yemeni-laws/_next/static/media/291696193ea1e96b-s.p.1zf0xf1cyi65q.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/yemeni-laws/_next/static/media/648474ecaeaf4c9a-s.p.3bws0utn4kpyc.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/yemeni-laws/_next/static/media/9ff27b8a0a8f3dc0-s.p.40_3w74kn95bo.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/yemeni-laws/_next/static/media/d41831e24743a3c1-s.p.08tn9snzkmifr.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"tools","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"66de7myYGrnVRBBvtdGUM"}
