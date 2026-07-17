@@ -39,7 +39,15 @@ function endpoint(baseUrl: string): string {
   } catch {
     throw new Error("عنوان خادم Nexus غير صحيح");
   }
-  if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+  // نسمح بـhttp للمضيف المحليّ وعناوين الشبكة الخاصّة (تجربة/شبكة داخليّة)؛
+  // نفرض HTTPS فقط على العناوين العامّة.
+  const h = url.hostname;
+  const isLocal =
+    h === "localhost" || h === "127.0.0.1" ||
+    /^192\.168\.\d+\.\d+$/.test(h) ||
+    /^10\.\d+\.\d+\.\d+$/.test(h) ||
+    /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(h);
+  if (url.protocol !== "https:" && !isLocal) {
     throw new Error("يجب أن يستخدم خادم Nexus اتصال HTTPS آمناً");
   }
   return `${raw}/chat`;

@@ -2376,8 +2376,17 @@ export default function Home() {
       openRef(s.law_id, s.article_number ?? "");
       return;
     }
-    const c = nexusCitations[n - 1];
-    if (c && c.source) run(c.source.split(" - ")[0].trim(), "search");
+    // استشهادات النواة مُرقّمة بحقل ref (قد يكون غير متتابع) لا بترتيب المصفوفة.
+    const c = nexusCitations.find((x) => x.ref === n) ?? nexusCitations[n - 1];
+    if (c && c.source) {
+      // نبحث باسم القانون (بلا «رقم/لسنة» الزائدة) + رقم المادّة إن ظهر في المصدر.
+      const art = c.source.match(/الماد[ةه]\s*\(?\s*(\d+)/);
+      const law = c.source
+        .split(/[—–]|( - )/)[0]
+        .replace(/\s*رقم\s*\(?\d+\)?.*$/, "")
+        .trim();
+      run(art ? `${law} مادة ${art[1]}` : law, "search");
+    }
   }
   const [aiMeta, setAiMeta] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
@@ -2702,18 +2711,14 @@ export default function Home() {
         let replyText = offlineText;
         let model = "";
         let streamedLive = false;
-        // بثّ من النواة (يُستخدم مباشرةً أو كارتداد إن فشل Gemini)
-        // نحقن سياق حاسبات التطبيق المحسوب محلياً (دية/رسوم/مواريث) في رسالة
-        // النواة لتستند إليه — كما يفعل مسار Gemini تماماً.
-        const nexusExtra = [
-          calculatorContext
-            ? `[معطيات محسوبة من حاسبات التطبيق — استند إليها في جوابك:\n${calculatorContext}]`
-            : "",
-          `[معرفة التطبيق — استعِن بها للأسئلة عن التطبيق وحاسباته وميزاته ونطاقه:\n${appKnowledge()}]`,
-        ].filter(Boolean).join("\n\n");
+        // للنواة (الدماغ): نرسل السؤال نظيفًا مع السياق (الرسائل السابقة). لا نحقن
+        // «معرفة التطبيق» هنا — فالدماغ يستعمل آخر رسالة كاستعلام استرجاع، وحقنها
+        // يلوّث البحث بكلمات لا صلة لها. نُبقي معطيات الحاسبات فقط عند وجودها.
         const nexusMessages: NexusMessage[] = [
           ...history,
-          { role: "user", content: `${q}\n\n${nexusExtra}` },
+          calculatorContext
+            ? { role: "user", content: `${q}\n\n[معطيات محسوبة من حاسبات التطبيق:\n${calculatorContext}]` }
+            : userMsg,
         ];
         const streamFromNexus = async () => {
           let acc = "";
@@ -2748,7 +2753,10 @@ export default function Home() {
             replyText = reply.content;
             model = reply.model;
           };
-          if (geminiKey.trim()) {
+          if (nexusUrl.trim()) {
+            // النواة (الدماغ) هي المسار الأساسيّ عند ضبط رابطها.
+            await streamFromNexus();
+          } else if (geminiKey.trim()) {
             try {
               const reply = await geminiChat(
                 geminiKey, [...history, userMsg], hits, calculatorContext, appKnowledge(), userName,
