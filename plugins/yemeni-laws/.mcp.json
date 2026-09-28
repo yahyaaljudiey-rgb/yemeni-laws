@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "yemeni-laws": {
+      "type": "http",
+      "url": "https://yl-feedback.vercel.app/api/mcp"
+    }
+  }
+}

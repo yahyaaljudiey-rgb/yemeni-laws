@@ -1,0 +1,29 @@
+{
+  "name": "yemeni-laws",
+  "version": "1.0.0",
+  "description": "Search and read the verified Yemeni legislation library from ChatGPT and Codex.",
+  "author": {
+    "name": "Yahya Aljudiey",
+    "url": "https://github.com/yahyaaljudiey-rgb"
+  },
+  "homepage": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/",
+  "repository": "https://github.com/yahyaaljudiey-rgb/yemeni-laws",
+  "keywords": ["yemen", "law", "legal", "arabic", "legislation"],
+  "interface": {
+    "displayName": "القوانين اليمنية",
+    "shortDescription": "ابحث واقرأ التشريعات اليمنية الموثقة.",
+    "longDescription": "يربط ChatGPT بمكتبة القوانين اليمنية للبحث في مواد القوانين واللوائح والاتفاقيات والأحكام وقراءة النص الكامل مع روابط الاستشهاد.",
+    "developerName": "يحيى الجديعي",
+    "category": "Education",
+    "capabilities": ["Search", "Read"],
+    "websiteURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/",
+    "privacyPolicyURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/privacy/",
+    "termsOfServiceURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/terms/",
+    "defaultPrompt": [
+      "ابحث في القوانين اليمنية عن شروط الطعن بالنقض.",
+      "ما المواد المنظمة للفسخ في قانون الأحوال الشخصية؟",
+      "اعرض النصوص اليمنية المتعلقة بالرشوة."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

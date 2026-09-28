@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // تذييل موحّد مختصر: توقيع المطوّر ووصف موجز — يُستخدم في كل الصفحات
 export default function SiteFooter() {
   return (
@@ -11,6 +13,11 @@ export default function SiteFooter() {
         <p className="text-xs text-muted mt-1.5">
           مكتبة قانونية ذكية للقوانين اليمنية
         </p>
+        <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-muted">
+          <Link href="/privacy" className="hover:text-accent">الخصوصية</Link>
+          <span aria-hidden>·</span>
+          <Link href="/terms" className="hover:text-accent">شروط الاستخدام</Link>
+        </div>
       </div>
     </footer>
   );
