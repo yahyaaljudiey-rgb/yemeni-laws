@@ -27,7 +27,7 @@ function main() {
   // 1) القوانين
   const laws = db
     .prepare(
-      `SELECT id, title, law_number, year, category FROM laws ORDER BY id`,
+      `SELECT id, title, law_number, year, category, source_file, notes FROM laws ORDER BY id`,
     )
     .all();
 

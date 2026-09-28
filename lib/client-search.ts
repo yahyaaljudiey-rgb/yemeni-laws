@@ -29,6 +29,8 @@ interface BundleLaw {
   law_number: string | null;
   year: string | null;
   category: string | null;
+  source_file: string | null;
+  notes: string | null;
 }
 interface BundleArticle {
   id: number;
@@ -437,6 +439,8 @@ export interface ClientLaw {
   law_number: string | null;
   year: string | null;
   category: string | null;
+  source_file: string | null;
+  notes: string | null;
   article_count: number;
 }
 
@@ -453,6 +457,8 @@ export async function clientLawList(): Promise<ClientLaw[]> {
     law_number: l.law_number,
     year: l.year,
     category: l.category,
+    source_file: l.source_file,
+    notes: l.notes,
     article_count: counts.get(l.id) ?? 0,
   }));
 }

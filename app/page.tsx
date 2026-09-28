@@ -924,12 +924,31 @@ interface LawMeta {
   law_number: string | null;
   year: string | null;
   category: string | null;
+  source_file: string | null;
+  notes: string | null;
   article_count: number;
+}
+
+interface LawProvenance {
+  sourceName?: string;
+  sourceUrl?: string;
+  status?: string;
+  statusNote?: string;
+}
+
+function lawProvenance(law: Pick<LawMeta, "notes">): LawProvenance | null {
+  if (!law.notes) return null;
+  try {
+    const parsed = JSON.parse(law.notes) as LawProvenance;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 // النوافذ الأربع للتصفّح: كل نافذة تجمع تصنيفاً أو أكثر
 const BROWSE_WINDOWS: { key: string; label: string; cats: string[] }[] = [
-  { key: "قانون", label: "القوانين", cats: ["دستور", "قانون"] },
+  { key: "قانون", label: "القوانين والقرارات", cats: ["دستور", "قانون", "قرار"] },
   { key: "لائحة", label: "اللوائح", cats: ["لائحة"] },
   { key: "اتفاقية", label: "الاتفاقيات والمواثيق", cats: ["اتفاقية"] },
   { key: "حكم", label: "الأحكام والقواعد القضائية", cats: ["حكم"] },
@@ -1251,6 +1270,7 @@ function LawLibrary({
 
   // ——— عرض وثيقة واحدة (قراءة ككتاب) ———
   if (selected) {
+    const provenance = lawProvenance(selected);
     // بحث داخل الوثيقة: رقم خالص ⇒ مطابقة رقم المادة بالضبط، وإلا بحث نصّي
     const raw = artQuery.trim();
     const isNum = /^[\d٠-٩]+$/.test(raw);
@@ -1469,6 +1489,28 @@ function LawLibrary({
             {selected.year && <span>لسنة {selected.year}م</span>}
             <span>{selected.article_count} مادة</span>
           </div>
+          {provenance && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              {provenance.status === "repealed" && (
+                <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 font-medium">
+                  نسخة تاريخية ملغاة
+                </span>
+              )}
+              {provenance.sourceUrl?.startsWith("https://www.agoye.gov.ye/") && (
+                <a
+                  href={provenance.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  المصدر: {provenance.sourceName || "النيابة العامة اليمنية"} ↗
+                </a>
+              )}
+              {provenance.statusNote && (
+                <span className="basis-full text-muted">{provenance.statusNote}</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* بحث داخل الوثيقة برقم المادة (أو كلمة في النص) */}
