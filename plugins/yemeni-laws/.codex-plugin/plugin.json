@@ -17,8 +17,8 @@
     "category": "Education",
     "capabilities": ["Search", "Read"],
     "websiteURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/",
-    "privacyPolicyURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/privacy/",
-    "termsOfServiceURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/terms/",
+    "privacyPolicyURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/privacy.html",
+    "termsOfServiceURL": "https://yahyaaljudiey-rgb.github.io/yemeni-laws/terms.html",
     "defaultPrompt": [
       "ابحث في القوانين اليمنية عن شروط الطعن بالنقض.",
       "ما المواد المنظمة للفسخ في قانون الأحوال الشخصية؟",

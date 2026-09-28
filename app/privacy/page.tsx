@@ -39,7 +39,7 @@ export default function PrivacyPage() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/" className="text-accent underline">العودة إلى المكتبة</Link>
           <a href="https://github.com/yahyaaljudiey-rgb/yemeni-laws/issues" className="text-accent underline">التواصل عبر GitHub</a>
-          <Link href="/terms" className="text-accent underline">شروط الاستخدام</Link>
+          <Link href="/terms.html" className="text-accent underline">شروط الاستخدام</Link>
         </div>
       </article>
     </main>

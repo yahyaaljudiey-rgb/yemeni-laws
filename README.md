@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Yemeni Laws MCP
+
+The public, read-only MCP endpoint lets ChatGPT and other compatible clients search and fetch Yemeni legislation without an OpenAI API key owned by this project:
+
+```text
+https://yl-feedback.vercel.app/api/mcp
+```
+
+The plugin package is in `plugins/yemeni-laws/`. It exposes the standard `search` and `fetch` tools, returns public citation URLs, and does not require user authentication. See `plugins/yemeni-laws/SUBMISSION.md` for the public-directory submission metadata and evaluation cases.
+
 ## Getting Started
 
 First, run the development server:

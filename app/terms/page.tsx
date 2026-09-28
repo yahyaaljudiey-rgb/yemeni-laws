@@ -38,7 +38,7 @@ export default function TermsPage() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/" className="text-accent underline">العودة إلى المكتبة</Link>
-          <Link href="/privacy" className="text-accent underline">سياسة الخصوصية</Link>
+          <Link href="/privacy.html" className="text-accent underline">سياسة الخصوصية</Link>
         </div>
       </article>
     </main>
