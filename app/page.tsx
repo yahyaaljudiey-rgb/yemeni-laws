@@ -23,6 +23,7 @@ import { assistantAnswer, appKnowledge, type AssistantResult } from "@/lib/clien
 import { nexusChat, nexusChatStream, type NexusMessage, type NexusCitation } from "@/lib/nexus-client";
 import { exportLegalPdf, downloadLegalWord, copyLegalRich, type LegalDoc } from "@/lib/pdf-export";
 import { geminiChat, geminiExpandQuery } from "@/lib/gemini-client";
+import { openAIChat } from "@/lib/openai-client";
 
 const GEMINI_ONLY_BUILD = process.env.NEXT_PUBLIC_GEMINI_ONLY === "1";
 
@@ -41,6 +42,10 @@ const FEEDBACK_URL =
 // الاسترجاع محليّ والوسيط يحمل مفتاح Gemini خادميًّا. بديل خفيف عن نواة VPS.
 const SHARED_AI_URL =
   process.env.NEXT_PUBLIC_AI_PROXY_URL || `${FEEDBACK_URL}/api/ai`;
+
+// وسيط ChatGPT المشترك: المفتاح يبقى على خادم Vercel ولا يصل إلى المتصفح.
+const OPENAI_AI_URL =
+  process.env.NEXT_PUBLIC_OPENAI_PROXY_URL || `${FEEDBACK_URL}/api/openai`;
 
 interface CommunityItem {
   q: string;
@@ -701,9 +706,9 @@ function AiSettings({
 
         <div className="p-5 space-y-4 text-sm leading-7">
           <p className="text-muted">
-            التطبيق <strong className="text-foreground">مجاني بالكامل</strong>:
-            البحث والتصفّح والحاسبات تعمل بلا أي مفتاح. للدردشة الذكية يمكن لكل
-            مستخدم إنشاء مفتاح Gemini مجاني خاص به وحفظه على جهازه.
+            التطبيق <strong className="text-foreground">مجاني للمستخدم</strong>:
+            البحث والتصفّح والحاسبات تعمل بلا إعداد، والدردشة المشتركة عبر ChatGPT
+            تعمل بلا مفتاح شخصي. الحقول التالية اختيارية للمستخدم المتقدم فقط.
           </p>
 
           <div>
@@ -2787,6 +2792,18 @@ export default function Home() {
             replyText = data.answer;
             setSources((data.sources as AskSource[]) || []);
           };
+          const askSharedOpenAI = async () => {
+            const reply = await openAIChat(
+              OPENAI_AI_URL,
+              [...history, userMsg],
+              hits,
+              calculatorContext,
+              appKnowledge(),
+              userName,
+            );
+            replyText = reply.content;
+            model = reply.model;
+          };
           // الوسيط المشترك (بلا مفتاح): نفس تأصيل Gemini، لكن عبر خادم يحمل المفتاح.
           const askSharedProxy = async () => {
             const reply = await geminiChat(
@@ -2795,10 +2812,7 @@ export default function Home() {
             replyText = reply.content;
             model = reply.model;
           };
-          if (nexusUrl.trim()) {
-            // النواة (الدماغ) هي المسار الأساسيّ عند ضبط رابطها.
-            await streamFromNexus();
-          } else if (geminiKey.trim()) {
+          if (geminiKey.trim()) {
             try {
               const reply = await geminiChat(
                 geminiKey, [...history, userMsg], hits, calculatorContext, appKnowledge(), userName,
@@ -2813,12 +2827,20 @@ export default function Home() {
           } else if (apiKey.trim()) {
             await askClaude();
           } else {
-            // الافتراضي للزملاء: الوسيط المشترك بلا إعداد. النواة القديمة احتياط أخير.
+            // الافتراضي للمستخدم العادي: ChatGPT المشترك بلا إعداد أو مفتاح شخصي.
+            // Nexus ثم Gemini مساران احتياطيان حتى تبقى الدردشة متاحة عند تعطل مزود.
             try {
-              await askSharedProxy();
-            } catch (pErr) {
-              if (nexusUrl.trim()) await streamFromNexus();
-              else throw pErr;
+              await askSharedOpenAI();
+            } catch (openAIError) {
+              if (nexusUrl.trim()) {
+                await streamFromNexus();
+              } else {
+                try {
+                  await askSharedProxy();
+                } catch {
+                  throw openAIError;
+                }
+              }
             }
           }
         } catch (aiErr) {
@@ -2872,9 +2894,9 @@ export default function Home() {
             <button
               onClick={() => setShowAi(true)}
               className="yl-appbar-btn text-sm whitespace-nowrap"
-              title="إعداد الذكاء الاصطناعي بمفتاحك الخاص"
+              title="الدردشة عبر ChatGPT وإعدادات الذكاء الاختيارية"
             >
-              {apiKey || geminiKey || nexusUrl ? "🤖 مُفعّل" : "🤖"}
+              🤖 مُفعّل
             </button>
           </div>
         </div>
