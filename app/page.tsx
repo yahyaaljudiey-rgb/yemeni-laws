@@ -45,7 +45,7 @@ const SHARED_AI_URL =
 
 // وسيط ChatGPT المشترك: المفتاح يبقى على خادم Vercel ولا يصل إلى المتصفح.
 const OPENAI_AI_URL =
-  process.env.NEXT_PUBLIC_OPENAI_PROXY_URL || `${FEEDBACK_URL}/api/openai`;
+  process.env.NEXT_PUBLIC_OPENAI_PROXY_URL || "";
 
 interface CommunityItem {
   q: string;
@@ -707,8 +707,9 @@ function AiSettings({
         <div className="p-5 space-y-4 text-sm leading-7">
           <p className="text-muted">
             التطبيق <strong className="text-foreground">مجاني للمستخدم</strong>:
-            البحث والتصفّح والحاسبات تعمل بلا إعداد، والدردشة المشتركة عبر ChatGPT
-            تعمل بلا مفتاح شخصي. الحقول التالية اختيارية للمستخدم المتقدم فقط.
+            البحث والتصفّح والحاسبات تعمل بلا إعداد، والدردشة داخل التطبيق تستخدم
+            الخدمة المشتركة المتاحة. ويمكن ربط مكتبة القوانين بـChatGPT عبر إضافة
+            MCP مستقلة؛ الحقول التالية اختيارية للمستخدم المتقدم فقط.
           </p>
 
           <div>
@@ -2827,20 +2828,26 @@ export default function Home() {
           } else if (apiKey.trim()) {
             await askClaude();
           } else {
-            // الافتراضي للمستخدم العادي: ChatGPT المشترك بلا إعداد أو مفتاح شخصي.
-            // Nexus ثم Gemini مساران احتياطيان حتى تبقى الدردشة متاحة عند تعطل مزود.
-            try {
-              await askSharedOpenAI();
-            } catch (openAIError) {
-              if (nexusUrl.trim()) {
-                await streamFromNexus();
-              } else {
-                try {
-                  await askSharedProxy();
-                } catch {
-                  throw openAIError;
+            // داخل الموقع نستخدم الوسيط المدفوع فقط عندما يُضبط صراحةً وقت البناء.
+            // الربط المجاني بحساب ChatGPT نفسه يتم عبر إضافة MCP الخارجية.
+            if (OPENAI_AI_URL) {
+              try {
+                await askSharedOpenAI();
+              } catch (openAIError) {
+                if (nexusUrl.trim()) {
+                  await streamFromNexus();
+                } else {
+                  try {
+                    await askSharedProxy();
+                  } catch {
+                    throw openAIError;
+                  }
                 }
               }
+            } else if (nexusUrl.trim()) {
+              await streamFromNexus();
+            } else {
+              await askSharedProxy();
             }
           }
         } catch (aiErr) {
@@ -2894,7 +2901,7 @@ export default function Home() {
             <button
               onClick={() => setShowAi(true)}
               className="yl-appbar-btn text-sm whitespace-nowrap"
-              title="الدردشة عبر ChatGPT وإعدادات الذكاء الاختيارية"
+              title="إعدادات الدردشة والذكاء الاختيارية"
             >
               🤖 مُفعّل
             </button>
