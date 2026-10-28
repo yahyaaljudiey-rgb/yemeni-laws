@@ -1,0 +1,997 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-26T01:45:25.556Z",
+  "basis": "explicit-text-references",
+  "edges": [
+    {
+      "fromLawId": 194,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15408,
+        "quote": "القانون رقم(3)لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 195,
+      "toLawId": 92,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15455,
+        "quote": "القانون رقم(4)لسنة2000"
+      }
+    },
+    {
+      "fromLawId": 198,
+      "toLawId": 113,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15556,
+        "quote": "قانون الوقف الشرعي رقم(33)لسنة1992"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 51,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (25) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 305,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (26) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 92,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (4) لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 16,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (1) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (3 ) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 200,
+      "toLawId": 125,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15623,
+        "quote": "القانون رقم (43) لسنة 2005"
+      }
+    },
+    {
+      "fromLawId": 204,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 15786,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 209,
+      "toLawId": 24,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 15942,
+        "quote": "قانون الأحزاب والتنظيمات السياسية رقم (66) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 210,
+      "toLawId": 9,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 16009,
+        "quote": "قانون رقم (35) لسنة 2005"
+      }
+    },
+    {
+      "fromLawId": 211,
+      "toLawId": 33,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16292,
+        "quote": "قانون رقم (28) لسنة 1995"
+      }
+    },
+    {
+      "fromLawId": 212,
+      "toLawId": 40,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16335,
+        "quote": "القانون رقم(13)لسنة2001"
+      }
+    },
+    {
+      "fromLawId": 213,
+      "toLawId": 26,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 16471,
+        "quote": "القانون رقم(20)لسنة1992"
+      }
+    },
+    {
+      "fromLawId": 213,
+      "toLawId": 56,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16471,
+        "quote": "القانون رقم(20)لسنة1995"
+      }
+    },
+    {
+      "fromLawId": 214,
+      "toLawId": 59,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16651,
+        "quote": "قانون رقم ( 28 ) لسنة 2010"
+      }
+    },
+    {
+      "fromLawId": 214,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 16651,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 215,
+      "toLawId": 66,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16669,
+        "quote": "قانون رقم(13) لسنة 2005"
+      }
+    },
+    {
+      "fromLawId": 216,
+      "toLawId": 74,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16778,
+        "quote": "القانون رقم(6) لسنة1990"
+      }
+    },
+    {
+      "fromLawId": 218,
+      "toLawId": 78,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 16835,
+        "quote": "قانون الخدمة المدنية رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 219,
+      "toLawId": 92,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17095,
+        "quote": "القانون رقم (4) لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 221,
+      "toLawId": 96,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17427,
+        "quote": "قانون رقم (25) لسنة 1990"
+      }
+    },
+    {
+      "fromLawId": 222,
+      "toLawId": 104,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17587,
+        "quote": "قانون رقم (23) لسنة 2010"
+      }
+    },
+    {
+      "fromLawId": 222,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17587,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 223,
+      "toLawId": 25,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17605,
+        "quote": "قانون المخالفات رقم 17 لسنة 1994"
+      }
+    },
+    {
+      "fromLawId": 223,
+      "toLawId": 68,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17605,
+        "quote": "القانون رقم (12) لسنة 1994"
+      }
+    },
+    {
+      "fromLawId": 223,
+      "toLawId": 32,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17605,
+        "quote": "القانون رقم (13) لسنة 1994"
+      }
+    },
+    {
+      "fromLawId": 224,
+      "toLawId": 380,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17642,
+        "quote": "القانون رقم (24 ) لسنة 2002"
+      }
+    },
+    {
+      "fromLawId": 224,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17642,
+        "quote": "القانون رقم ( 3 ) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 225,
+      "toLawId": 15,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17690,
+        "quote": "قانون رقم(11) لسنة 2002"
+      }
+    },
+    {
+      "fromLawId": 226,
+      "toLawId": 134,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17726,
+        "quote": "القانون رقم (19) لسنة 1999"
+      }
+    },
+    {
+      "fromLawId": 226,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17726,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 227,
+      "toLawId": 137,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17748,
+        "quote": "القانون رقم(48) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 228,
+      "toLawId": 145,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17849,
+        "quote": "القانون رقم(40) لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 229,
+      "toLawId": 152,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17906,
+        "quote": "قانون رقم (23) لسنة 1997"
+      }
+    },
+    {
+      "fromLawId": 230,
+      "toLawId": 159,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17941,
+        "quote": "قانون رقم (46)لسنة 2008"
+      }
+    },
+    {
+      "fromLawId": 230,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 17941,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 231,
+      "toLawId": 145,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 17982,
+        "quote": "القانون رقم(40) لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 232,
+      "toLawId": 161,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 18039,
+        "quote": "القانون رقم(47) لسنة1991"
+      }
+    },
+    {
+      "fromLawId": 233,
+      "toLawId": 164,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 18073,
+        "quote": "القانون رقم(24)لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 234,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 18113,
+        "quote": "القانون رقم(19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 234,
+      "toLawId": 123,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 18113,
+        "quote": "القانون رقم(35) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 234,
+      "toLawId": 176,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 18113,
+        "quote": "القانون رقم(30) لسنة 1996"
+      }
+    },
+    {
+      "fromLawId": 235,
+      "toLawId": 186,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 18232,
+        "quote": "قانون مكافحة الفساد رقم (39) لسنة 2006"
+      }
+    },
+    {
+      "fromLawId": 236,
+      "toLawId": 191,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 18406,
+        "quote": "القانون رقم (15)لسنة(2000"
+      }
+    },
+    {
+      "fromLawId": 237,
+      "toLawId": 108,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 18537,
+        "quote": "القانون رقم (8) لسنة1990"
+      }
+    },
+    {
+      "fromLawId": 238,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 18877,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 240,
+      "toLawId": 127,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19050,
+        "quote": "قانون رقم (18) لسنة 2003"
+      }
+    },
+    {
+      "fromLawId": 243,
+      "toLawId": 133,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19382,
+        "quote": "القانون رقم ( 13) لسنة1990"
+      }
+    },
+    {
+      "fromLawId": 243,
+      "toLawId": 380,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19382,
+        "quote": "القانون رقم (24 ) لسنة 2002"
+      }
+    },
+    {
+      "fromLawId": 243,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19382,
+        "quote": "القانون رقم ( 3 ) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 244,
+      "toLawId": 137,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19411,
+        "quote": "القانون رقم (48) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 246,
+      "toLawId": 108,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19622,
+        "quote": "القانون رقم(8)لسنة 1990"
+      }
+    },
+    {
+      "fromLawId": 246,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19622,
+        "quote": "القانون رقم(19)لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 247,
+      "toLawId": 75,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19710,
+        "quote": "القانون رقم (39) لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 248,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19871,
+        "quote": "القانون رقم (3)لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 248,
+      "toLawId": 118,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19871,
+        "quote": "القانون رقم(23)لسنة 2007"
+      }
+    },
+    {
+      "fromLawId": 249,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19906,
+        "quote": "القانون رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 249,
+      "toLawId": 125,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19906,
+        "quote": "القانون رقم (43) لسنة 2005"
+      }
+    },
+    {
+      "fromLawId": 250,
+      "toLawId": 90,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19935,
+        "quote": "القانون رقم (36) لسنة 2006"
+      }
+    },
+    {
+      "fromLawId": 251,
+      "toLawId": 133,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19941,
+        "quote": "القانون رقم(13) لسنة 1990"
+      }
+    },
+    {
+      "fromLawId": 252,
+      "toLawId": 92,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19983,
+        "quote": "القانون رقم (4) لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 252,
+      "toLawId": 46,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19983,
+        "quote": "القانون رقم (19) لسنة 2002"
+      }
+    },
+    {
+      "fromLawId": 252,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 19983,
+        "quote": "القانون رقم ( 3 ) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 253,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20029,
+        "quote": "القانون رقم ( 3 ) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 253,
+      "toLawId": 46,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20029,
+        "quote": "القانون رقم (19) لسنة 2002"
+      }
+    },
+    {
+      "fromLawId": 253,
+      "toLawId": 92,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20029,
+        "quote": "القانون رقم (4) لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 254,
+      "toLawId": 133,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20085,
+        "quote": "القانون رقم (13) لسنة 1990"
+      }
+    },
+    {
+      "fromLawId": 254,
+      "toLawId": 126,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20085,
+        "quote": "القانون رقم (23) لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 255,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20161,
+        "quote": "القانون رقم( 3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 255,
+      "toLawId": 96,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20161,
+        "quote": "القانون رقم ( 25) لسنة 1990"
+      }
+    },
+    {
+      "fromLawId": 256,
+      "toLawId": 145,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20202,
+        "quote": "القانون رقم (40) لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 256,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20202,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 257,
+      "toLawId": 122,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20220,
+        "quote": "القانون رقم (33) لسنة 2003"
+      }
+    },
+    {
+      "fromLawId": 269,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20648,
+        "quote": "القانون رقم(19)لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 269,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 20648,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 304,
+      "toLawId": 145,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 24680,
+        "quote": "قانون رقم(40) لسنة 1992"
+      }
+    },
+    {
+      "fromLawId": 311,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 24980,
+        "quote": "القانون رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 311,
+      "toLawId": 32,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 24980,
+        "quote": "القانون رقم (13) لسنة 1994"
+      }
+    },
+    {
+      "fromLawId": 394,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 27544,
+        "quote": "القانون رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 394,
+      "toLawId": 32,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 27544,
+        "quote": "القانون رقم (13) لسنة 1994"
+      }
+    },
+    {
+      "fromLawId": 408,
+      "toLawId": 57,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 28142,
+        "quote": "القانون رقم (31) لسنة 2009"
+      }
+    },
+    {
+      "fromLawId": 408,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28142,
+        "quote": "القانون رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 408,
+      "toLawId": 125,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28142,
+        "quote": "القانون رقم (43) لسنة 2005"
+      }
+    },
+    {
+      "fromLawId": 408,
+      "toLawId": 92,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28142,
+        "quote": "القانون رقم (4) لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 408,
+      "toLawId": 79,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28142,
+        "quote": "القانون رقم (67) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 408,
+      "toLawId": 191,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28142,
+        "quote": "القانون رقم(15)لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 409,
+      "toLawId": 188,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 28168,
+        "quote": "قانون رقم (1) لسنة 2010"
+      }
+    },
+    {
+      "fromLawId": 410,
+      "toLawId": 118,
+      "kind": "implements",
+      "evidence": {
+        "articleId": 28230,
+        "quote": "قانون رقم (23) لسنة 2007"
+      }
+    },
+    {
+      "fromLawId": 410,
+      "toLawId": 108,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28230,
+        "quote": "القانون المالي رقم (8) لسنة 1990"
+      }
+    },
+    {
+      "fromLawId": 410,
+      "toLawId": 92,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28230,
+        "quote": "القانون رقم (4) لسنة 2000"
+      }
+    },
+    {
+      "fromLawId": 411,
+      "toLawId": 78,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28668,
+        "quote": "القانون رقم (19) لسنة 1991"
+      }
+    },
+    {
+      "fromLawId": 411,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28668,
+        "quote": "القانون رقم (3) لسنة 2004"
+      }
+    },
+    {
+      "fromLawId": 411,
+      "toLawId": 107,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28668,
+        "quote": "القانون رقم (1) لسنة 2009"
+      }
+    },
+    {
+      "fromLawId": 412,
+      "toLawId": 180,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28705,
+        "quote": "القانون رقم (3) لسنه 2004"
+      }
+    },
+    {
+      "fromLawId": 413,
+      "toLawId": 32,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28737,
+        "quote": "القانون رقم(13) لسنة1994"
+      }
+    },
+    {
+      "fromLawId": 413,
+      "toLawId": 149,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28737,
+        "quote": "القانون رقم (31) لسنة1999"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 68,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (12) لسنة1994"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 25,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (17) لسنة1994"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 32,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (13) لسنة1994"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 53,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (5) لسنة2007"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 52,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم(16) لسنة 2007"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 134,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم(19) لسنة1999"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 120,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (44) لسنة1999"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 71,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (14) لسنة1990"
+      }
+    },
+    {
+      "fromLawId": 414,
+      "toLawId": 133,
+      "kind": "cites",
+      "evidence": {
+        "articleId": 28762,
+        "quote": "القانون رقم (13) لسنة1990"
+      }
+    },
+    {
+      "fromLawId": 403,
+      "toLawId": 402,
+      "kind": "protocol",
+      "evidence": {
+        "articleId": 27890,
+        "quote": "اتفاقية حقوق الأشخاص ذوي الإعاقة"
+      }
+    },
+    {
+      "fromLawId": 404,
+      "toLawId": 401,
+      "kind": "protocol",
+      "evidence": {
+        "articleId": 27909,
+        "quote": "اتفاقية حقوق الطفل"
+      }
+    }
+  ]
+}

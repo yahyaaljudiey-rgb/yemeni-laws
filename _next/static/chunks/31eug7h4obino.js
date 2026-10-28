@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,54004,e=>{e.q("/yemeni-laws/_next/static/media/ort.wasm.bundle.min.1gng_g2hni118.mjs")},24573,e=>{e.q("/yemeni-laws/_next/static/media/ort-wasm-simd-threaded.2e-x1qvrucsty.wasm")}]);

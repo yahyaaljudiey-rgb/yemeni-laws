@@ -1,0 +1,9 @@
+1:"$Sreact.fragment"
+2:I[47257,["/yemeni-laws/_next/static/chunks/07p9s0sr6c_e_.js","/yemeni-laws/_next/static/chunks/14mrh2-p_w84d.js"],"ClientPageRoot"]
+3:I[1051,["/yemeni-laws/_next/static/chunks/07p9s0sr6c_e_.js","/yemeni-laws/_next/static/chunks/14mrh2-p_w84d.js","/yemeni-laws/_next/static/chunks/3hgsoqftffrih.js","/yemeni-laws/_next/static/chunks/1_g7lfknqed_x.js"],"default"]
+6:I[97367,["/yemeni-laws/_next/static/chunks/07p9s0sr6c_e_.js","/yemeni-laws/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+7:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/yemeni-laws/_next/static/chunks/3hgsoqftffrih.js","async":true}],["$","script","script-1",{"src":"/yemeni-laws/_next/static/chunks/1_g7lfknqed_x.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"PtWH5Upl-CkoH-cZ4ZYF-"}
+4:{}
+5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
+8:null

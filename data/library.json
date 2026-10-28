@@ -1,0 +1,342 @@
+{
+ "version": 1,
+ "count": 28583,
+ "packs": [
+  {
+   "file": "a-4bdeaadac3ff0a0a.json",
+   "bytes": 801366,
+   "gzipBytes": 134808,
+   "articles": 1104,
+   "laws": [
+    1,
+    27
+   ]
+  },
+  {
+   "file": "a-898705c03d2f2a6a.json",
+   "bytes": 1071743,
+   "gzipBytes": 188966,
+   "articles": 1382,
+   "laws": [
+    28,
+    40
+   ]
+  },
+  {
+   "file": "a-ffa75a35612ef0ec.json",
+   "bytes": 976602,
+   "gzipBytes": 178307,
+   "articles": 1057,
+   "laws": [
+    41,
+    51
+   ]
+  },
+  {
+   "file": "a-67f0f7485cd80f88.json",
+   "bytes": 807668,
+   "gzipBytes": 140102,
+   "articles": 1057,
+   "laws": [
+    52,
+    57
+   ]
+  },
+  {
+   "file": "a-dfb2862250a17820.json",
+   "bytes": 1165424,
+   "gzipBytes": 205363,
+   "articles": 1424,
+   "laws": [
+    58,
+    73
+   ]
+  },
+  {
+   "file": "a-8a221f8d6147d44e.json",
+   "bytes": 734218,
+   "gzipBytes": 135745,
+   "articles": 856,
+   "laws": [
+    74,
+    90
+   ]
+  },
+  {
+   "file": "a-44dc21fe9c1a340c.json",
+   "bytes": 785668,
+   "gzipBytes": 133272,
+   "articles": 795,
+   "laws": [
+    91,
+    95
+   ]
+  },
+  {
+   "file": "a-3158548f1c4b7193.json",
+   "bytes": 737777,
+   "gzipBytes": 131306,
+   "articles": 727,
+   "laws": [
+    96,
+    103
+   ]
+  },
+  {
+   "file": "a-bcc89c1ffa272a8f.json",
+   "bytes": 1195858,
+   "gzipBytes": 212355,
+   "articles": 1777,
+   "laws": [
+    104,
+    109
+   ]
+  },
+  {
+   "file": "a-bcec93f0cb0610f0.json",
+   "bytes": 874040,
+   "gzipBytes": 149749,
+   "articles": 1021,
+   "laws": [
+    110,
+    117
+   ]
+  },
+  {
+   "file": "a-01c3f2c249135fa6.json",
+   "bytes": 728878,
+   "gzipBytes": 131072,
+   "articles": 899,
+   "laws": [
+    118,
+    137
+   ]
+  },
+  {
+   "file": "a-a26378b826b95030.json",
+   "bytes": 739627,
+   "gzipBytes": 133088,
+   "articles": 946,
+   "laws": [
+    138,
+    154
+   ]
+  },
+  {
+   "file": "a-be55f314d474a6bd.json",
+   "bytes": 986229,
+   "gzipBytes": 182157,
+   "articles": 1138,
+   "laws": [
+    155,
+    173
+   ]
+  },
+  {
+   "file": "a-9f22e6ad527116b3.json",
+   "bytes": 726430,
+   "gzipBytes": 134659,
+   "articles": 707,
+   "laws": [
+    174,
+    185
+   ]
+  },
+  {
+   "file": "a-29c8cc5d230a6263.json",
+   "bytes": 948134,
+   "gzipBytes": 166985,
+   "articles": 623,
+   "laws": [
+    186,
+    197
+   ]
+  },
+  {
+   "file": "a-1a6c3736e8f2712d.json",
+   "bytes": 822052,
+   "gzipBytes": 144620,
+   "articles": 453,
+   "laws": [
+    198,
+    209
+   ]
+  },
+  {
+   "file": "a-0efb6af45c1467aa.json",
+   "bytes": 847538,
+   "gzipBytes": 147532,
+   "articles": 807,
+   "laws": [
+    210,
+    216
+   ]
+  },
+  {
+   "file": "a-07262e50fb83a485.json",
+   "bytes": 1049362,
+   "gzipBytes": 188374,
+   "articles": 1033,
+   "laws": [
+    217,
+    227
+   ]
+  },
+  {
+   "file": "a-8dfd097656c0c16a.json",
+   "bytes": 1498704,
+   "gzipBytes": 266149,
+   "articles": 1435,
+   "laws": [
+    228,
+    240
+   ]
+  },
+  {
+   "file": "a-30e716eb2955d816.json",
+   "bytes": 720115,
+   "gzipBytes": 129294,
+   "articles": 699,
+   "laws": [
+    241,
+    251
+   ]
+  },
+  {
+   "file": "a-f547a71a66574d2d.json",
+   "bytes": 989699,
+   "gzipBytes": 175208,
+   "articles": 613,
+   "laws": [
+    252,
+    267
+   ]
+  },
+  {
+   "file": "a-a55a9e4286d7fa81.json",
+   "bytes": 811903,
+   "gzipBytes": 151570,
+   "articles": 779,
+   "laws": [
+    268,
+    279
+   ]
+  },
+  {
+   "file": "a-e8c37491c8f0cf64.json",
+   "bytes": 859971,
+   "gzipBytes": 163215,
+   "articles": 937,
+   "laws": [
+    280,
+    291
+   ]
+  },
+  {
+   "file": "a-f748e0510d732557.json",
+   "bytes": 1715296,
+   "gzipBytes": 314827,
+   "articles": 1658,
+   "laws": [
+    292,
+    301
+   ]
+  },
+  {
+   "file": "a-54386d9116e01e08.json",
+   "bytes": 799864,
+   "gzipBytes": 92465,
+   "articles": 538,
+   "laws": [
+    302,
+    302
+   ]
+  },
+  {
+   "file": "a-519a97639a456d89.json",
+   "bytes": 714225,
+   "gzipBytes": 142288,
+   "articles": 566,
+   "laws": [
+    303,
+    318
+   ]
+  },
+  {
+   "file": "a-d90e17d9d5ef20f1.json",
+   "bytes": 801467,
+   "gzipBytes": 158669,
+   "articles": 716,
+   "laws": [
+    319,
+    331
+   ]
+  },
+  {
+   "file": "a-cd308be8265aaa86.json",
+   "bytes": 831087,
+   "gzipBytes": 166882,
+   "articles": 563,
+   "laws": [
+    332,
+    347
+   ]
+  },
+  {
+   "file": "a-0cebda079fb37c27.json",
+   "bytes": 898068,
+   "gzipBytes": 183804,
+   "articles": 688,
+   "laws": [
+    348,
+    380
+   ]
+  },
+  {
+   "file": "a-5dba4bc81bbfc085.json",
+   "bytes": 722424,
+   "gzipBytes": 133164,
+   "articles": 386,
+   "laws": [
+    381,
+    394
+   ]
+  },
+  {
+   "file": "a-e78d567a394e8acd.json",
+   "bytes": 730707,
+   "gzipBytes": 145509,
+   "articles": 579,
+   "laws": [
+    395,
+    408
+   ]
+  },
+  {
+   "file": "a-eb87a944caa0e5a1.json",
+   "bytes": 792523,
+   "gzipBytes": 148114,
+   "articles": 594,
+   "laws": [
+    409,
+    413
+   ]
+  },
+  {
+   "file": "a-380e695694fe1401.json",
+   "bytes": 22157,
+   "gzipBytes": 5083,
+   "articles": 26,
+   "laws": [
+    414,
+    414
+   ]
+  }
+ ],
+ "related": {
+  "file": "related-ba38e5c3b90c8a99.bin",
+  "bytes": 686000,
+  "count": 28583,
+  "k": 5
+ }
+}

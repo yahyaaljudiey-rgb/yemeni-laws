@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[71819,["/yemeni-laws/_next/static/chunks/07p9s0sr6c_e_.js","/yemeni-laws/_next/static/chunks/14mrh2-p_w84d.js","/yemeni-laws/_next/static/chunks/1sx025bk40pan.js","/yemeni-laws/_next/static/chunks/2paik__6lqogw.js"],"default"]
+3:I[97367,["/yemeni-laws/_next/static/chunks/07p9s0sr6c_e_.js","/yemeni-laws/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{}],[["$","script","script-0",{"src":"/yemeni-laws/_next/static/chunks/1sx025bk40pan.js","async":true}],["$","script","script-1",{"src":"/yemeni-laws/_next/static/chunks/2paik__6lqogw.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"PtWH5Upl-CkoH-cZ4ZYF-"}
+5:null
